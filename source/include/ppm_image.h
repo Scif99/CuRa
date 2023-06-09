@@ -52,13 +52,18 @@ public:
     /// @param row Row in image
     /// @param col 
     /// @param val 
-    std::array<float,3> Get(int row, int col, std::array<float, 3> val) {
-        data_[row*width_+ col] = val;
+    std::array<float,3> Get(int row, int col, std::array<float, 3> val) const {
+        return data_[row*width_+ col];
     }
 
     void Fill(const std::array<float,3>& col) {
         for(auto& pixel : data_) pixel = col;
     }
+
+
+    int Height() const {return height_;};
+    int Width() const {return width_;};
+    
 
 
 };
@@ -72,7 +77,6 @@ inline void PPMImage::Write(std::ofstream& out) {
         const auto&[r,g,b] = pixel; //Get current pixel
         out<< static_cast<int>(255.999*r)<< " "<< static_cast<int>(255.999*g)<<" "<<static_cast<int>(255.999*b)<<'\n'; //Scale and write to file
     }
-    std::cerr<<"\nDone\n";
 }
 
 
