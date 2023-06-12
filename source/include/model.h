@@ -47,7 +47,7 @@ public:
 //Example of input 'v 0.123 0.234 0.345 1.0'
 //We only care about the first 3 numbers (x,y,z)
 Vec3 Model::ParseOBJVertexPos(std::string_view line) {
-    auto words = Split(line.data(), ' ');
+    const auto words = Split(line.data(), ' ');
 
     return Vec3{std::stof(words[1]),std::stof(words[2]),std::stof(words[3])}; //only want the 3 vertices
 }
@@ -56,7 +56,7 @@ Vec3 Model::ParseOBJVertexPos(std::string_view line) {
 //The important info is the first number in each word, representing the index of the vertex
 std::vector<int> Model::ParseOBJFaceIndices(std::string_view line) {
 
-    auto words = Split(line.data(), ' ');
+    const auto words = Split(line.data(), ' ');
 
     //Each element is now something like '6/4/1'.
     //We now extract the first number (the vertex index)

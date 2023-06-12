@@ -12,6 +12,7 @@ private:
 
     int height_;
     int width_;
+public:    
     std::vector<Color> data_; //image data. Note that the color range is [0,1] and not [0,255]
 
 public:

@@ -33,6 +33,8 @@
 
 main
 
+*.vscode
+
 build/
 
 [Bb][Uu][Ii][Ll][Dd]
