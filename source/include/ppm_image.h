@@ -19,67 +19,49 @@
 
 
 
+
 class PPMImage {
 private:
-    enum class Format {
-        BW,
-        RGB
-    };
 
     int height_;
     int width_;
-    std::vector<std::array<float,3>> data_; //image data. Note that the color range is [0,1] and not [0,255]
+    std::vector<Color> data_; //image data. Note that the color range is [0,1] and not [0,255]
 
 public:
-    PPMImage(int height, int width, Format = Format::RGB)
-    :  height_{height}, width_{width} {data_.resize(height*width);}
+    PPMImage(int height, int width)
+    :  height_{height}, width_{width} {data_.resize((height+1)*(width+1));}
 
 
-
-    /// @brief Writes image data to a file
-    /// @param out File stream
-    void Write(std::ofstream& out);
-
-    /// @brief Set a specific pixel to an RGB color
-    /// @param row Row in image
-    /// @param col 
-    /// @param val 
-    void Set(int row, int col, std::array<float, 3> val) {
-        data_[row*width_+ col] = val;
-    }
-
-    /// @brief Returns the color of a specified pixel
-    /// @param row Row in image
-    /// @param col 
-    /// @param val 
-    std::array<float,3> Get(int row, int col, std::array<float, 3> val) const {
-        return data_[row*width_+ col];
-    }
-
-    void Fill(const std::array<float,3>& col) {
-        for(auto& pixel : data_) pixel = col;
-    }
-
-
-    int Height() const {return height_;};
-    int Width() const {return width_;};
-    
-
-
-};
-
-
-inline void PPMImage::Write(std::ofstream& out) {
-
+    void Write(std::ofstream& out){
     out<<"P3\n"<<width_<<" "<<height_<<"\n255\n"; //TODO change for Black and white
 
     for(const auto& pixel : data_) {
-        const auto&[r,g,b] = pixel; //Get current pixel
+        const auto&[r,g,b] = pixel.Data(); //Get current pixel
         out<< static_cast<int>(255.999*r)<< " "<< static_cast<int>(255.999*g)<<" "<<static_cast<int>(255.999*b)<<'\n'; //Scale and write to file
     }
 }
 
+    /// @brief Set a specific pixel to an RGB color
+    /// @param row Row in image
+    /// @param x 
+    /// @param y 
+    void Set(int x, int y, const Color& val) {
+        assert(y*width_ + x < data_.size());
+        data_[y*width_+ x] = val;
+    }
 
 
+    Color Get(int row, int col) const {
+        return data_[row*width_+ col];
+    }
+
+    void Fill(const Color& col) {
+        for(auto& pixel : data_) pixel = col;
+    }
+
+    int Height() const {return height_;};
+    int Width() const {return width_;};
+    
+};
 
 #endif
