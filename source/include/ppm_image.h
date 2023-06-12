@@ -7,19 +7,6 @@
 #include <variant>
 #include <vector>
 
-// struct ColorVisitor {
-
-
-// };
-
-// struct Color {
-//     std::variant<std::array<float,3>,
-//                  bool> data_;
-// };
-
-
-
-
 class PPMImage {
 private:
 
@@ -33,8 +20,7 @@ public:
 
 
     void Write(std::ofstream& out){
-    out<<"P3\n"<<width_<<" "<<height_<<"\n255\n"; //TODO change for Black and white
-
+    out<<"P3\n"<<width_<<" "<<height_<<"\n255\n"; 
     for(const auto& pixel : data_) {
         const auto&[r,g,b] = pixel.Data(); //Get current pixel
         out<< static_cast<int>(255.999*r)<< " "<< static_cast<int>(255.999*g)<<" "<<static_cast<int>(255.999*b)<<'\n'; //Scale and write to file
@@ -43,8 +29,8 @@ public:
 
     /// @brief Set a specific pixel to an RGB color
     /// @param row Row in image
-    /// @param x 
-    /// @param y 
+    /// @param x x coordinate in pixel space
+    /// @param y y coordinate in pixel space
     void Set(int x, int y, const Color& val) {
         assert(y*width_ + x < data_.size());
         data_[y*width_+ x] = val;

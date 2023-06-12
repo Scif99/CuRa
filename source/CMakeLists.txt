@@ -1,4 +1,6 @@
-add_executable(${PROJECT} main.cpp)
+add_executable(${PROJECT} 
+   main.cpp
+   )
 
 target_include_directories(${PROJECT}
    PRIVATE

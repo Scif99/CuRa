@@ -1,3 +1,6 @@
+#ifndef MODEL_H
+#define MODEL_H
+
 #include <array>
 #include <sstream>
 #include <string>
@@ -6,9 +9,11 @@
 #include <vector>
 #include "vec.h"
 
-//splits a string into words according to a delimiter
-//Returns words in a vector
-static std::vector<std::string> Split(std::string line, char delimiter) {
+/// @brief Splits a line into words by a specified delimiter
+/// @param line String to be split
+/// @param delimiter The words will be split using this. By default splits using whitespace
+/// @return A vector containing the words
+static std::vector<std::string> Split(std::string line, char delimiter=' ') {
     std::vector<std::string> words;
     std::istringstream iss(line.data());
     for(std::string token; std::getline(iss,token, ' ');) {
@@ -22,7 +27,6 @@ private:
     std::vector<Vec3> vertices_;
     std::vector<std::vector<int>> faces_;
 
-
     void Parse(std::string_view filename);
     Vec3 ParseOBJVertexPos(std::string_view line); //Parses a geometric vertex line from an obj file
     std::vector<int> ParseOBJFaceIndices(std::string_view line);
@@ -31,9 +35,7 @@ public:
 
 
     Model(std::string_view path) {
-
         Parse(path);
-
     }
 
     const std::vector<Vec3>& Vertices() const noexcept{return vertices_;};
@@ -88,7 +90,6 @@ void Model::Parse(std::string_view filename) {
             faces_.push_back(ParseOBJFaceIndices(curr_line));
         }
     }
-    
-
-
 };
+
+#endif
