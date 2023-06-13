@@ -25,6 +25,9 @@ float EdgeFunction(const Vec2& p, const Vec2& v0, const Vec2& v1) {
     auto a = p - v0; //Vector representing (ccw) edge of triangle
     auto b = v1 - v0; //Vector from vertex 0 to point
 
+    auto c = -a;
+    c+=b;
+
     return a.X()*b.Y() - a.Y()*b.X() > 0;
 }
 

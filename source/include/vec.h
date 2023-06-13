@@ -33,7 +33,7 @@ public:
     constexpr float Z() const noexcept requires(Dim==3)  {return elem[2];}
 
     constexpr Vec operator-()  noexcept {
-        auto ret = *this;
+        Vec<Dim> ret(*this);
         std::transform(this->cbegin(),this->cend(),
                    ret.begin(),
                    [](auto v) {return -v;});
@@ -46,8 +46,8 @@ public:
     
     constexpr Vec& operator+=(const Vec& other) {
         std::transform(this->cbegin(),this->cend(), 
-                       other.cbegin(), other.cend(),
-                       [](auto l, auto r){return l+r;});
+                       other.cbegin(), this->begin(),
+                       [](float l, float r){return l+r;});
         return *this;
     }
     constexpr Vec& operator*=(const float t)  {
@@ -74,8 +74,9 @@ public:
     auto begin() const { return elem.begin(); }
     auto end() const { return elem.end(); }
 
-    friend constexpr bool operator==(const Vec& lhs, const Vec& rhs);
-    //friend constexpr Vec operator+(const Vec& v1, const Vec& v2);
+    template <std::size_t S>      // all instantiations of this template are my friends
+    friend constexpr bool operator==(const Vec<S>& lhs, const Vec<S>& rhs);
+
 };
 
 //Aliases
@@ -91,60 +92,45 @@ inline constexpr bool operator == (const Vec<Dim>& lhs, const Vec<Dim>& rhs)
 }
 
 template<std::size_t Dim>
-inline constexpr Vec<Dim> operator+(const Vec<Dim>& u, const Vec<Dim>& v) 
+inline constexpr Vec<Dim> operator+(const Vec<Dim>& lhs, const Vec<Dim>& rhs) 
 {
-    auto ret = u;
-    for(auto i = 0;i<Dim;++i) {
-        ret[i] = u[i] + v[i];
-    }
-    // std::transform(u.cbegin(),u.cend(),
-    //                v.cbegin(),v.cend(),
-    //                ret.begin(),
-    //                [](auto l, auto r) {return l+r;}
-    //               );
+    auto ret{lhs};
+    std::transform(lhs.cbegin(),lhs.cend(),
+                   rhs.cbegin(), ret.begin(),
+                   [](auto l, auto r) {return l+r;}
+                  );
     return ret;
 }
 
 template<std::size_t Dim>
-inline constexpr Vec<Dim> operator-(const Vec<Dim>& u, const Vec<Dim>& v) 
+inline constexpr Vec<Dim> operator-(const Vec<Dim>& lhs, const Vec<Dim>& rhs) 
 {
-    Vec<Dim> ret{u};
-    for(auto i = 0;i<Dim;++i) {
-        ret[i] = u[i] - v[i];
-    }
-    // std::transform(u.begin(),u.end(),
-    //                v.begin(),v.end(),
-    //                ret.begin(),
-    //                [](const auto l, const auto r) {return l-r;}
-    //               );          
+    auto ret{lhs};
+    std::transform(lhs.cbegin(),lhs.cend(),
+                   rhs.cbegin(), ret.begin(),
+                   []( auto l, auto r) {return l-r;}
+                  );          
     return ret;
 }
 
 template<std::size_t Dim>
-inline constexpr Vec<Dim> operator*(const Vec<Dim> &u, const Vec<Dim> &v) 
+inline constexpr Vec<Dim> operator*(const Vec<Dim> &lhs, const Vec<Dim> &rhs) 
 {
-    auto ret = u;
-    for(auto i = 0;i<Dim;++i) {
-        ret[i] = u[i] * v[i];
-    }
-    // std::transform(u.cbegin(),u.cend(),
-    //                v.cbegin(),v.cend(),
-    //                ret.begin(),
-    //                [](auto l, auto r) {return l*r;}
-    //               );          
+    auto ret{lhs};
+    std::transform(lhs.cbegin(),lhs.cend(),
+                   rhs.cbegin(), ret.begin(),
+                   [](auto l, auto r) {return l*r;}
+                  );          
     return ret;
 }
 template<std::size_t Dim>
 inline constexpr Vec<Dim> operator*(float f, const Vec<Dim>& vec) 
 {
-    auto ret = vec;
-    for(auto i = 0;i<Dim;++i) {
-        ret[i] = f* vec[i];
-    }
-    // std::transform(vec.cbegin(),vec.cend(),
-    //                vec.begin(),
-    //                [f](auto v) {return f*v;}
-    //               );               
+    auto ret{vec};
+    std::transform(vec.cbegin(),vec.cend(),
+                   ret.begin(),
+                   [f](auto v) {return f*v;}
+                  );               
     return ret;
 }
 
