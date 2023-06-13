@@ -1,11 +1,14 @@
 #ifndef PPM_IMAGE_H
 #define PPM_IMAGE_H
 
+
 #include <array>
 #include <iostream>
 #include <fstream>
 #include <variant>
 #include <vector>
+
+#include "vec.h"
 
 class PPMImage {
 private:
@@ -13,7 +16,7 @@ private:
     int height_;
     int width_;
 public:    
-    std::vector<Color> data_; //image data. Note that the color range is [0,1] and not [0,255]
+    std::vector<Color3> data_; //image data. Note that the color range is [0,1] and not [0,255]
 
 public:
     PPMImage(int height, int width)
@@ -32,17 +35,17 @@ public:
     /// @param row Row in image
     /// @param x x coordinate in pixel space
     /// @param y y coordinate in pixel space
-    void Set(int x, int y, const Color& val) {
+    void Set(int x, int y, const Color3& val) {
         assert(y*width_ + x < data_.size());
         data_[y*width_+ x] = val;
     }
 
 
-    Color Get(int row, int col) const {
+    Color3 Get(int row, int col) const {
         return data_[row*width_+ col];
     }
 
-    void Fill(const Color& col) {
+    void Fill(const Color3& col) {
         for(auto& pixel : data_) pixel = col;
     }
 
