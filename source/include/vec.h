@@ -32,6 +32,10 @@ public:
     constexpr float Y() const noexcept {return elem[1];}
     constexpr float Z() const noexcept requires(Dim==3)  {return elem[2];}
 
+    constexpr float R() const noexcept requires(Dim==3) {return elem[0];}
+    constexpr float G() const noexcept requires(Dim==3) {return elem[1];}
+    constexpr float B() const noexcept requires(Dim==3) {return elem[2];}
+
     constexpr Vec operator-()  noexcept {
         Vec<Dim> ret(*this);
         std::transform(this->cbegin(),this->cend(),
@@ -81,6 +85,8 @@ public:
 
 //Aliases
 using Vec2 = Vec<2>;
+using Point2 = Vec<2>;
+
 using Vec3 = Vec<3>;
 using Color3 = Vec<3>;
 using Point3 = Vec<3>;
