@@ -31,7 +31,7 @@ using Triangle = std::array<Vertex, 3>;
 
 //Checks whether a pixel coordinate is occupied by a triangle
 //If true, returns the barycentric coordinates at the pixel location
-std::optional<std::array<float,3>> InTriangle(const Vec2& p, const Triangle& t) {
+std::optional<std::array<float,3>> Opt_InTriangle(const Vec2& p, const Triangle& t) {
     const auto& [v0,v1,v2] = t; //Unpack vertices of triangle
     float w0 = EdgeFunction(v1.pixel_coords, v2.pixel_coords, p); // signed area of the triangle v1v2p multiplied by 2
     float w1 = EdgeFunction(v2.pixel_coords, v0.pixel_coords, p); // signed area of the triangle v2v0p multiplied by 2
@@ -55,9 +55,9 @@ std::optional<std::array<float,3>> InTriangle(const Vec2& p, const Triangle& t) 
 void RasteriseAndColor(const Triangle& t, PPMImage& image) {
     for(int y =0; y < image.Height(); ++y ) {
         for(int x = 0; x<image.Width(); ++x) {
-            auto p = Vec2(x,y);
+            auto p = Vec2(x,y); //TODO move p to centre of pixel?
             // Check if the pixel lies inside the triangle
-            if (auto bary_coords = InTriangle(p,t); bary_coords) {
+            if (auto bary_coords = Opt_InTriangle(p,t); bary_coords) {
                 const auto& [w0,w1,w2] = bary_coords.value(); //unpack barycentric coordinates
                 const auto& [v0,v1,v2] = t; //Unpack vertices of triangle
                 
@@ -80,33 +80,39 @@ void RasteriseAndColor(const Triangle& t, PPMImage& image) {
 
 int main() {
 
-	constexpr int height{800};
-	constexpr int width{800};
+	constexpr int height{8};
+	constexpr int width{8};
 	
 	PPMImage image{height,width};
 	std::ofstream out_file{"image.ppm"};
     constexpr auto white = std::array{1.f,1.f,1.f};
 
-    //Define the coordinates of the triangle vertices in pixel space
-    constexpr auto v0 = Vec2{200,200};
-    constexpr auto v1 = Vec2{600,600};
-    constexpr auto v2 = Vec2{600,0};
+    Model head("assets/models/head.obj");
 
-    //Define the colors at each vertex position
-    constexpr auto c0 = Color3{1.f,0.f,0.f};
-    constexpr auto c1 = Color3{0.f,1.f,0.f};
-    constexpr auto c2 = Color3{0.f,0.f,1.f};
+    //Iterate over each face (triangle) in the model
+    for(const auto& face : head.Faces()) {
+        //Each face contains the indices of 3 vertices 
+        //We extract the vertex positions using these indices
+        const auto v0 = head.Vertices()[face[0]];
+        const auto v1 = head.Vertices()[face[1]];
+        const auto v2 = head.Vertices()[face[2]];
 
-    //Store attributes in a vertex 
-    constexpr Vertex a = {v0,c0};
-    constexpr Vertex b = {v1,c1};
-    constexpr Vertex c = {v2,c2};
+        //The positions are in 3D where each coord lies in [-1,1]
+        //We need to extract the x and y coords and scale.
+        Vec2 p0{(v0.X()+1)*width/2.f, (-v0.Y()+1)*height/2.f};
+        Vec2 p1{(v1.X()+1)*width/2.f, (-v1.Y()+1)*height/2.f};
+        Vec2 p2{(v2.X()+1)*width/2.f, (-v2.Y()+1)*height/2.f};
 
-    constexpr Triangle triangle{a,b,c};
-    
-    
-    RasteriseAndColor(triangle, image);
+        //Define some random color for each vertex
+        const auto col = Color3{(float)rand() / (float)RAND_MAX,(float)rand() / (float)RAND_MAX,(float)rand() / (float)RAND_MAX} ;
+        const Vertex a{p0,col};
+        const Vertex b{p1,col};
+        const Vertex c{p2,col};
 
+        const Triangle triangle{a,b,c};
+
+        RasteriseAndColor(triangle, image);
+    }
 
 	if(!out_file) {std::cerr<<"Error creating file\n"; return 1;};
 	image.Write(out_file);

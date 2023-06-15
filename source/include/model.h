@@ -6,6 +6,7 @@
 #include <string>
 #include <string_view>
 #include <fstream>
+#include <ranges>
 #include <vector>
 #include "vec.h"
 
@@ -37,6 +38,7 @@ public:
     Model(std::string_view path) {
         Parse(path);
     }
+
 
     const std::vector<Vec3>& Vertices() const noexcept{return vertices_;};
     const std::vector<std::vector<int>>& Faces() const noexcept{return faces_;}; //TODO switch to array?
