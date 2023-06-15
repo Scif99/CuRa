@@ -6,6 +6,7 @@
 #include <vector>
 #include <numeric>
 
+#include "buffer.h"
 #include "line.h"
 #include "math.h"
 #include "model.h"
@@ -64,18 +65,15 @@ std::optional<std::array<float,3>> Opt_InTriangle(const Vec2& p, const Triangle&
 void ProcessFragment() {};
 
 //Determines visibility of a triangle and colors it using interpolation
-void RasteriseAndColor(const Triangle& t, PPMImage& image, std::vector<float>& dbuffer) {
-    for(int y =0; y < image.Height(); ++y ) {
-        for(int x = 0; x<image.Width(); ++x) {
+void RasteriseAndColor(const Triangle& t, Buffer<Color3>& image_buf, Buffer<float>& depth_buf) {
+    for(int y =0; y < image_buf.Height(); ++y ) {
+        for(int x = 0; x<image_buf.Width(); ++x) {
             auto p = Vec2(x,y); //TODO move p to centre of pixel?
             // Check if the pixel lies inside the triangle
             if (auto bary_coords = Opt_InTriangle(p,t); bary_coords) {
                 const auto& [w0,w1,w2] = bary_coords.value(); //unpack barycentric coordinates
-
                 const auto& [v0,v1,v2] = t; //Unpack vertices of triangle
 
-
-                
                 //For all per-vertex attributes, we can now interpolate using barycentric coords (just color for now)
                 //For example, the red component at pixel p is the weighted sum of the red components of t, weighted by barycentric coords
                 //Note that v0.col is the RGB color of the 1st vertex of the triangle 
@@ -89,11 +87,11 @@ void RasteriseAndColor(const Triangle& t, PPMImage& image, std::vector<float>& d
                 const auto depths = std::array{v0.depth_,v1.depth_,v2.depth_};
                 const auto z = InterpolateDepth(bary_coords.value(), depths);
                 //IS THIS TRIANGLE THE CLOSEST ONE FOR THIS PIXEL???
-                if(z>dbuffer[y*image.Width() + x]) {
-                dbuffer[y*image.Width() + x] = z;
+                if(z>depth_buf.Get(x,y)) {
+                    depth_buf.Set(x,y,z);
                 //normally z lies in [-1,1]
                 auto z_scaled = (z+1)/2.f;
-                image.Set(x,y,Color3(z_scaled,z_scaled,z_scaled));
+                image_buf.Set(x,y,Color3(z_scaled,z_scaled,z_scaled));
                 }
             }
         }
@@ -106,14 +104,11 @@ int main() {
 
 	constexpr int height{800};
 	constexpr int width{800};
-	
-	PPMImage image{height,width};
     
-    std::vector<float> depthBuffer(height*width, -std::numeric_limits<float>::max()); //Create Depth buffer Assume +z is towards camera?
+    Buffer<Color3> image_buffer(height, width); //Create Depth buffer Assume +z is towards camera?
+    Buffer<float> depth_buffer(height, width, -std::numeric_limits<float>::max()); //Create Depth buffer Assume +z is towards camera?
 
-	std::ofstream out_file{"image.ppm"};
-    constexpr auto white = std::array{1.f,1.f,1.f};
-
+    //Load model
     Model head("assets/models/head.obj");
 
     //Iterate over each face (triangle) in the model
@@ -143,11 +138,14 @@ int main() {
 
         const Triangle triangle{a,b,c};
 
-        RasteriseAndColor(triangle, image, depthBuffer);
+        RasteriseAndColor(triangle, image_buffer, depth_buffer);
 
 
     }
 
+    //Create image from buffer and write to file
+    PPMImage image{std::move(image_buffer)};
+    std::ofstream out_file{"image.ppm"};
 	if(!out_file) {std::cerr<<"Error creating file\n"; return 1;};
 	image.Write(out_file);
 }

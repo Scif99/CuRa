@@ -1,12 +1,13 @@
 #ifndef LINE_H
 #define LINE_H
 
+#include "buffer.h"
 #include "math.h"
 #include "ppm_image.h"
 #include "vec.h"
 
 //Subroutine for drawing a line that mostly decreases in y 
-inline void DrawNLine(int x0, int y0, int x1, int y1, PPMImage& image, const Color3& col) {
+inline void DrawNLine(int x0, int y0, int x1, int y1, Buffer<Color3>& image, const Color3& col) {
 
     auto x_curr{x0};
     auto y_curr{y0};
@@ -23,7 +24,7 @@ inline void DrawNLine(int x0, int y0, int x1, int y1, PPMImage& image, const Col
 }
 
 //Subroutine for drawing a line that moves mostly increases in x but slightly decreases in y
-inline void DrawNELine(int x0, int y0, int x1, int y1, PPMImage& image, const Color3& col) {
+inline void DrawNELine(int x0, int y0, int x1, int y1, Buffer<Color3>& image, const Color3& col) {
 
     auto x_curr{x0};
     auto y_curr{y0};
@@ -41,7 +42,7 @@ inline void DrawNELine(int x0, int y0, int x1, int y1, PPMImage& image, const Co
 
 
 //Subroutine for drawing a line that moves mostly increases in x but slightly increases in y
-inline void DrawSELine(int x0, int y0, int x1, int y1, PPMImage& image, const Color3& col) {
+inline void DrawSELine(int x0, int y0, int x1, int y1, Buffer<Color3>& image, const Color3& col) {
 
     auto f = [x0,y0, x1, y1](float x, float y) {
             return (y0 - y1)*x + (x1-x0)*y + x0*y1 - x1*y0;
@@ -59,7 +60,7 @@ inline void DrawSELine(int x0, int y0, int x1, int y1, PPMImage& image, const Co
 }
 
 //Subroutine for drawing a line that mostly increases in y 
-inline void DrawSLine(int x0, int y0, int x1, int y1, PPMImage& image, const Color3& col) {
+inline void DrawSLine(int x0, int y0, int x1, int y1, Buffer<Color3>& image, const Color3& col) {
 
     auto f = [x0,y0, x1, y1](float x, float y) {
             return (y0 - y1)*x + (x1-x0)*y + x0*y1 - x1*y0;
@@ -85,7 +86,7 @@ inline void DrawSLine(int x0, int y0, int x1, int y1, PPMImage& image, const Col
 /// @param x1 Final x coordinate
 /// @param y1 Final y coordinates
 /// @param image The image that the line is drawn on
-inline void DrawLine(int x0, int y0, int x1, int y1, PPMImage& image) {
+inline void DrawLine(int x0, int y0, int x1, int y1, Buffer<Color3>& image) {
 
     Color3 white{1.f,1.f,1.f};
 
