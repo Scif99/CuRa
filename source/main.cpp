@@ -67,7 +67,7 @@ void ProcessFragment() {};
 //Determines visibility of a triangle and colors it using interpolation
 void RasteriseAndColor(const Triangle& t, Buffer<Color3>& image_buf, Buffer<float>& depth_buf) {
     for(int y =0; y < image_buf.Height(); ++y ) {
-        for(int x = 0; x<image_buf.Width(); ++x) {
+        for(int x = 0; x <image_buf.Width(); ++x) {
             auto p = Vec2(x,y); //TODO move p to centre of pixel?
             // Check if the pixel lies inside the triangle
             if (auto bary_coords = Opt_InTriangle(p,t); bary_coords) {
@@ -129,7 +129,6 @@ int main() {
         Vec2 s2{(w2.X()+1)*width/2.f, (-w2.Y()+1)*height/2.f};
 
         //Define some random color for each vertex
-//        auto col = Color3{(float)rand() / (float)RAND_MAX,(float)rand() / (float)RAND_MAX,(float)rand() / (float)RAND_MAX} ;
         auto col = Color3{(float)rand() / (float)RAND_MAX,(float)rand() / (float)RAND_MAX,(float)rand() / (float)RAND_MAX} ;
 
         const Vertex a{s0, w0.Z(), col};

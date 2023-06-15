@@ -164,7 +164,7 @@ inline constexpr Vec<Dim> UnitVector(const Vec<Dim>& vec)
 template<std::size_t Dim>
 inline constexpr float Dot(const Vec<Dim>& u, const Vec<Dim>& v)
 {
-    return  std::inner_product(u.cbegin(),u.cend(),v.cbegin(),0);
+    return  std::inner_product(u.cbegin(),u.cend(),v.cbegin(),0.f);
 }
 
 inline constexpr Vec<3> Cross(const Vec<3>& u, const Vec<3>& v)

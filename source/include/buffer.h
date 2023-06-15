@@ -25,17 +25,17 @@ public:
     int Height() const noexcept{return height_;}
     int Width() const noexcept {return width_;}
     
-    /// @brief Set a specific pixel to an RGB color
+    /// @brief Set a specific pixel to an RGB color. Note that origin is at the top left rather than bottom left
     /// @param row Row in image
     /// @param x x coordinate in pixel space
-    /// @param y y coordinate in pixel space
+    /// @param y y coordinate in pixel space 
     void Set(int x, int y, const T& val) {
         assert(y*width_ + x < data_.size());
         data_[y*width_+ x] = val;
     }
 
-    T Get(int row, int col) const {
-        return data_[row*width_+ col];
+    T Get(int x, int y) const {
+        return data_[y*width_+ x];
     }
 
     //Iterators
