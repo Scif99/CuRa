@@ -20,7 +20,7 @@ public:
 
 public:
     PPMImage(int height, int width)
-    :  height_{height}, width_{width} {data_.resize((height+1)*(width+1));}
+    :  height_{height}, width_{width} {data_.resize(height*width);}
 
 
     void Write(std::ofstream& out){

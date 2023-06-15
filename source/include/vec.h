@@ -11,6 +11,7 @@
 #include <optional>
 #include <random>
 
+//TODO: add template parameter for data type? (float and integer types)
 
 template<std::size_t Dim>
 requires(Dim==2 || Dim==3)
