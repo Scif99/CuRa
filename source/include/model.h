@@ -17,20 +17,36 @@
 static std::vector<std::string> Split(std::string line, char delimiter=' ') {
     std::vector<std::string> words;
     std::istringstream iss(line.data());
-    for(std::string token; std::getline(iss,token, ' ');) {
+    for(std::string token; std::getline(iss,token, delimiter);) {
+        if(!token.empty()) {
         words.push_back(token);
+        }
     }
     return words;
 }
 
+//A face contains the indices to vertex attributes such as position, texture coordinates etc
+// e.g. pos_dix[0] is the index to the vertex position of the first vertex
+struct Face {
+    std::vector<int> pos_idx;
+    std::vector<int> tex_idx;
+};
+
 class Model {
 private:
-    std::vector<Vec3> vertices_;
-    std::vector<std::vector<int>> faces_;
+    std::vector<Vec3f> vertices_;
+    std::vector<Vec2f> tex_coords_;
+    std::vector<Face> faces_;
 
     void Parse(std::string_view filename);
-    Vec3 ParseOBJVertexPos(std::string_view line); //Parses a geometric vertex line from an obj file
-    std::vector<int> ParseOBJFaceIndices(std::string_view line);
+
+
+    Vec3f ParseOBJVertexPos(std::string_view line); //Parses a geometric vertex line from an obj file
+    Vec2f ParseOBJTexCoords(std::string_view line); 
+    
+    Face ParseOBJFaceIndices(std::string_view line);
+    
+
 
 public:
 
@@ -40,32 +56,48 @@ public:
     }
 
 
-    const std::vector<Vec3>& Vertices() const noexcept{return vertices_;};
-    const std::vector<std::vector<int>>& Faces() const noexcept{return faces_;}; //TODO switch to array?
+    const std::vector<Vec3f>& Vertices() const noexcept{return vertices_;};
+    const std::vector<Vec2f>& TexCoords() const noexcept{return tex_coords_;}    
+    const std::vector<Face>& Faces() const noexcept{return faces_;}; //TODO switch to array?
 
 
 };
 
 //Example of input 'v 0.123 0.234 0.345 1.0'
 //We only care about the first 3 numbers (x,y,z)
-Vec3 Model::ParseOBJVertexPos(std::string_view line) {
+Vec3f Model::ParseOBJVertexPos(std::string_view line) {
     const auto words = Split(line.data(), ' ');
 
-    return Vec3{std::stof(words[1]),std::stof(words[2]),std::stof(words[3])}; //only want the 3 vertices
+    return Vec3f{std::stof(words[1]),std::stof(words[2]),std::stof(words[3])}; //only want the 3 vertices
 }
 
+
+//Example: vt  0.532 0.923 0.000
+//We only care about the first 2 numbers (u,v)
+Vec2f Model::ParseOBJTexCoords(std::string_view line) {
+    const auto words = Split(line.data(), ' ');
+    return Vec2f{std::stof(words[1]),std::stof(words[2])}; 
+}
+
+
 //Example of input 'f 6/4/1 3/5/3 7/6/5'
-//The important info is the first number in each word, representing the index of the vertex
-std::vector<int> Model::ParseOBJFaceIndices(std::string_view line) {
+//Example of output {6,3,7},{3,5,3}  ({position}, {tex_coord})
+//Each 'word' stores indices to attribute data
+//NOTE THE INDICES START FROM 1
+//Extracts the indices of the vertex position and texture coords
+Face Model::ParseOBJFaceIndices(std::string_view line) {
 
     const auto words = Split(line.data(), ' ');
 
-    //Each element is now something like '6/4/1'.
-    //We now extract the first number (the vertex index)
-    std::vector<int> face;
+    Face face;
     for(auto it = words.begin()+1; it!=words.end();++it) {
-        auto v_index = Split(*it,'/')[0]; //The first token is the vertex index
-        face.push_back(std::stoi(v_index) - 1);
+        //Each element is now something like '6/4/1'.
+        //We split again by '/' and then extract the data
+        const auto attribs = Split(*it,'/');
+        //we have now split '6/4/1' into  the sequence 6,4,2
+        //Remember to subtract 1 from the index to get 0-indexing
+        face.pos_idx.push_back(std::stoi(attribs[0]) - 1); //Position
+        face.tex_idx.push_back(std::stoi(attribs[1]) - 1); //Texture coord
     }
 
     return face; 
@@ -88,10 +120,60 @@ void Model::Parse(std::string_view filename) {
         if(curr_line.compare(0,2,"v ")==0){
             vertices_.push_back(ParseOBJVertexPos(curr_line));
         }
+        if(curr_line.compare(0,3,"vt ")==0){
+            tex_coords_.push_back(ParseOBJTexCoords(curr_line));
+        }
         if(curr_line.compare(0,2,"f ")==0) {
             faces_.push_back(ParseOBJFaceIndices(curr_line));
         }
     }
+};
+
+
+//TODO Better error handling (exceptions?)
+Buffer<Color3f> ParsePPMTexture(std::string_view filename) {
+    //#1 
+    if(!filename.ends_with(".ppm")) {
+        std::cerr<<"incorrect file format\n";
+    }
+
+    std::ifstream file(filename.data());
+    if(!file) {
+        std::cerr<<"Error loading file\n";
+    }
+
+    //the first line is the format
+    std::string s;
+    file>>s;
+    if(s!="P3") {
+        std::cerr<<"Wrong file type\n";
+    }
+
+    //The next two words are the width and height of the image respectively
+    file>>s;
+    auto width = std::stoi(s);
+    file>>s;
+    auto height = std::stoi(s);
+
+    //The next word is the colour range  (should be 255)
+    file>>s;
+    if(s!="255") {
+        std::cerr<<"Wrong color range\n";
+    }
+
+    //Now that we know the dimensions, we can create a buffer to extract the data into
+    Buffer<Color3f> buffer(height,width);
+
+    //Now we read in three values at a time, r,g,b.
+    std::string r,g,b;
+    int idx = 0;
+    while(file>>r>>g>>b) {
+        Color3f col{std::stof(r)/255.f,std::stof(g)/255.f,std::stof(b)/255.f};
+        buffer[idx] = col;
+        ++idx;
+    }
+
+    return buffer;
 };
 
 #endif

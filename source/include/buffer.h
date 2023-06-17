@@ -38,6 +38,9 @@ public:
         return data_[y*width_+ x];
     }
 
+    T& operator[](int i) {return  data_[i];};
+    const T& operator[](int i) const {return data_[i];};
+
     //Iterators
     auto begin() { return data_.begin(); }
     auto end() { return data_.end(); }

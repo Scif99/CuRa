@@ -8,24 +8,28 @@
 #include "buffer.h"
 #include "vec.h"
 
+#include <string_view>
+#include <string>
+
+
 class PPMImage {
 private:
 
-    Buffer<Color3> buffer_; //image data. Note that the color range is [0,1] and not [0,255]
+    Buffer<Color3f> buffer_; //image data. Note that the color range is [0,1] and not [0,255]
 public:
     PPMImage(int height, int width)
     :  buffer_{height, width} {}
 
-    PPMImage(const Buffer<Color3>& buffer)
+    PPMImage(const Buffer<Color3f>& buffer)
     :  buffer_{buffer} {}
 
-    PPMImage(Buffer<Color3>&& buffer)
+    PPMImage(Buffer<Color3f>&& buffer)
     :  buffer_{std::move(buffer)} {}
 
     int Height() const noexcept{return buffer_.Height();}
     int Width() const noexcept {return buffer_.Width();}
 
-    Color3 Get(int x, int y) const {
+    Color3f Get(int x, int y) const {
         return buffer_.Get(x, y);
     }
 

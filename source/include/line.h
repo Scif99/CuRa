@@ -7,7 +7,7 @@
 #include "vec.h"
 
 //Subroutine for drawing a line that mostly decreases in y 
-inline void DrawNLine(int x0, int y0, int x1, int y1, Buffer<Color3>& image, const Color3& col) {
+inline void DrawNLine(int x0, int y0, int x1, int y1, Buffer<Color3f>& image, const Color3f& col) {
 
     auto x_curr{x0};
     auto y_curr{y0};
@@ -24,7 +24,7 @@ inline void DrawNLine(int x0, int y0, int x1, int y1, Buffer<Color3>& image, con
 }
 
 //Subroutine for drawing a line that moves mostly increases in x but slightly decreases in y
-inline void DrawNELine(int x0, int y0, int x1, int y1, Buffer<Color3>& image, const Color3& col) {
+inline void DrawNELine(int x0, int y0, int x1, int y1, Buffer<Color3f>& image, const Color3f& col) {
 
     auto x_curr{x0};
     auto y_curr{y0};
@@ -42,7 +42,7 @@ inline void DrawNELine(int x0, int y0, int x1, int y1, Buffer<Color3>& image, co
 
 
 //Subroutine for drawing a line that moves mostly increases in x but slightly increases in y
-inline void DrawSELine(int x0, int y0, int x1, int y1, Buffer<Color3>& image, const Color3& col) {
+inline void DrawSELine(int x0, int y0, int x1, int y1, Buffer<Color3f>& image, const Color3f& col) {
 
     auto f = [x0,y0, x1, y1](float x, float y) {
             return (y0 - y1)*x + (x1-x0)*y + x0*y1 - x1*y0;
@@ -60,7 +60,7 @@ inline void DrawSELine(int x0, int y0, int x1, int y1, Buffer<Color3>& image, co
 }
 
 //Subroutine for drawing a line that mostly increases in y 
-inline void DrawSLine(int x0, int y0, int x1, int y1, Buffer<Color3>& image, const Color3& col) {
+inline void DrawSLine(int x0, int y0, int x1, int y1, Buffer<Color3f>& image, const Color3f& col) {
 
     auto f = [x0,y0, x1, y1](float x, float y) {
             return (y0 - y1)*x + (x1-x0)*y + x0*y1 - x1*y0;
@@ -86,9 +86,9 @@ inline void DrawSLine(int x0, int y0, int x1, int y1, Buffer<Color3>& image, con
 /// @param x1 Final x coordinate
 /// @param y1 Final y coordinates
 /// @param image The image that the line is drawn on
-inline void DrawLine(int x0, int y0, int x1, int y1, Buffer<Color3>& image) {
+inline void DrawLine(int x0, int y0, int x1, int y1, Buffer<Color3f>& image) {
 
-    Color3 white{1.f,1.f,1.f};
+    Color3f white{1.f,1.f,1.f};
 
     //First evaluate special cases (horizontal/vertical) lines
     //Horizontal
