@@ -18,7 +18,7 @@ concept Decimal = std::is_floating_point_v<T>;
 
 //A generic 2D/3D vector class for different floating point precisions.
 template<Decimal Prec, std::size_t Dim>
-requires(Dim==2 || Dim==3)
+requires(Dim==2 || Dim==3 || Dim==4)
 class Vec {
 protected:
     std::array<Prec,Dim> elem;
@@ -33,13 +33,27 @@ public:
     explicit constexpr Vec(Prec x, Prec y, Prec z) requires(Dim==3) 
         : elem{x,y,z} {}
 
+    //Constructor for 4D vectors
+    explicit constexpr Vec() requires(Dim==4) = default;
+    explicit constexpr Vec(Prec x, Prec y, Prec z, Prec w) requires(Dim==4) 
+        : elem{x,y,z,w} {}
+
+    explicit constexpr Vec(Vec<Prec, 3> v3, Prec w) requires(Dim==4)
+        : elem{v3[0],v3[1],v3[2],w} {} 
+    
+
     constexpr Prec X() const noexcept {return elem[0];}
     constexpr Prec Y() const noexcept {return elem[1];}
-    constexpr Prec Z() const noexcept requires(Dim==3)  {return elem[2];}
+    constexpr Prec Z() const noexcept requires(Dim>=3)  {return elem[2];}
+    constexpr Prec W() const noexcept requires(Dim==4)  {return elem[3];}
+
 
     constexpr Prec R() const noexcept requires(Dim==3) {return elem[0];}
     constexpr Prec G() const noexcept requires(Dim==3) {return elem[1];}
     constexpr Prec B() const noexcept requires(Dim==3) {return elem[2];}
+
+    constexpr Prec U() const noexcept requires(Dim==2) {return elem[0];}
+    constexpr Prec V() const noexcept requires(Dim==2) {return elem[1];}
 
     constexpr Vec operator-()  noexcept {
         auto ret(*this);
@@ -67,7 +81,7 @@ public:
     }
     
     constexpr Vec& operator/=(const Prec t)  {
-        static_assert(t!=0);
+        assert(t!=0);
         return *this *= 1/t;
     }
 
@@ -95,6 +109,8 @@ using Point2f = Vec<float, 2>;
 using Vec3f = Vec<float,3>;
 using Color3f = Vec<float, 3>;
 using Point3f = Vec<float, 3>;
+using Vec4f = Vec<float,4>;
+
 
 using Vec2d = Vec<double, 2>;
 using Point2d = Vec<double, 2>;
