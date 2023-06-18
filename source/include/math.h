@@ -20,6 +20,9 @@
 // If this sign is positive then the point lies in the triangle
 // We keep the result for computing the barycentric coordinates
 [[nodiscard]] inline float EdgeFunction(const Vec2f& p, const Vec2f& v0, const Vec2f& v1) {
+
+    assert(v0!=v1);
+
     auto a = p - v0; //Vector representing (ccw) edge of triangle
     auto b = v1 - v0; //Vector from vertex 0 to point
 

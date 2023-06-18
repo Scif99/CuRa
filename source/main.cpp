@@ -32,9 +32,9 @@ for(const auto& entity: Scene) {
 };
 
 //cam_dist is the z-distance of the camera from the origin
-[[nodiscard]]  Mat4f CreateProjMat(float cam_dist) {
-    Mat4f p;
-    p(3,2) = -1.f/cam_dist;
+[[nodiscard]]  Mat4f CreateProjMat(const Vec3f& eye, const Vec3f& center) {
+    auto p = Mat4f::Identity();
+    p(3,2) = -1.f/(eye-center).Length();
     return p;
 }
 
@@ -65,7 +65,7 @@ struct Triangle {
 
     // Check if the pixel lies inside the triangle
     if (l0 >= 0 && l1 >= 0 && l2 >= 0) {
-        float area = EdgeFunction(v0.pixel_coords, v1.pixel_coords, v2.pixel_coords); // The edge function with a triangles vertices as its arguments results in twice the area of triangle
+        const auto area = float{EdgeFunction(v0.pixel_coords, v1.pixel_coords, v2.pixel_coords)}; // The edge function with a triangles vertices as its arguments results in twice the area of triangle
         // Compute barycentric coordinates
         l0 /= area;
         l1 /= area;
@@ -95,20 +95,20 @@ void RasteriseAndColor(const Triangle& triangle, Buffer<Color3f>& image_buf, Buf
                 // auto col = Color3{r,g,b};
 
                 //Get texture coords via interpolation
-                const auto tex_u = l0*v0.tex_coords[0] + l1*v1.tex_coords[0] + l2*v2.tex_coords[0];
-                const auto tex_v = l0*v0.tex_coords[1] + l1*v1.tex_coords[1] + l2*v2.tex_coords[1];
+                const auto tex_u{l0*v0.tex_coords[0] + l1*v1.tex_coords[0] + l2*v2.tex_coords[0]};
+                const auto tex_v{l0*v0.tex_coords[1] + l1*v1.tex_coords[1] + l2*v2.tex_coords[1]};
+                
                 //USE TEXTURE COORDS TO GET COLOR
-                //HEEEEEEEEEEEEEEEEERE
-                auto col = texture_map.Get(tex_u,tex_v);
-                                                                       
+                auto col{texture_map.Get(tex_u,tex_v)};
+
+                //Lighting                                                       
                 col*=triangle.intensity[0]; 
 
                 //Use Z buffer for hidden surface removal
-                const auto z = InterpolateDepth(bary_coords.value(), std::array{v0.depth_,v1.depth_,v2.depth_});
+                const auto z{InterpolateDepth(bary_coords.value(), std::array{v0.depth_,v1.depth_,v2.depth_})};
                 if(z>depth_buf.Get(x,y)) {
                     depth_buf.Set(x,y,z);
-                //normally z lies in [-1,1]
-                image_buf.Set(x,y,col);
+                    image_buf.Set(x,y,col);
                 }
             }
         }
@@ -116,31 +116,75 @@ void RasteriseAndColor(const Triangle& triangle, Buffer<Color3f>& image_buf, Buf
 }
 
 
-Vec3f ProjectAndViewPort(const Vec3f& world_coord,  int im_height, int im_width, bool flip_y) { 
+/// @brief Builds a view matrix.In other words, Defines the camera
+/// @brief Technically constructs a matrix that transforms vectors in the standard basis to vectors in the camera basis.
+/// @brief By convention, the camera will be facing in the -z direction
+/// @param eye Position of the camera
+/// @param center Direction in which the camera is facing
+/// @param up Defines the orientation of the camera
+/// @return View matrix
+Mat4f LookAt(const Vec3f& eye, const Vec3f& center, const Vec3f& up) {
+    //Construct an orthonormal basis
+    const auto z = Norm3f{eye - center}; //'forward' axis. By convention, the camera should be facing in the -z direction
+    const auto x = Norm3f{Cross<float,3>(up,z)}; //'left' axis
+    const auto y = Norm3f{Cross<float, 3>(z,x)}; //'up' axis
+        
+    //The goal of the view matrix is to transform from our standard basis to the camera basis.
+    //Therefore the view matrix is just the inverse of the transformation matrix from the standard basis to our camera basis.
+    //Since the camera basis is orthogonal, the inverse is equivalent to the transpose
+    Mat4f view_matrix;
+    for (int i=0; i<3; i++) {
+    view_matrix(0,i) = x[i];
+    view_matrix(1,i) = y[i];
+    view_matrix(2,i) = z[i];
+    view_matrix(i,3) = -eye[i];
+    }
+    return view_matrix;
+}
 
-    //Convert to homogeneous coordinates
-    const Vec4f homo_coords(world_coord,1.f);
+
+/// @brief Projects a point 
+/// @brief Note the z coordinate of the original point is kept as the depth
+/// @param coords Coordinates of the point to be projected (should be in camera space) 
+/// @param eye 
+/// @param center 
+/// @param im_height 
+/// @param im_width 
+/// @param flip_y 
+/// @return 3D vectors containing the coordinates of the projected point, along with the depth 
+Vec3f ProjectAndViewPort(const Vec4f& coords, int im_height, int im_width, bool flip_y) { 
+
     //Define projection matrix
-    Mat4f projection_mat = CreateProjMat(3.f);
+    auto projection_mat = Mat4f::Identity();
+    projection_mat(3,2) = -1.f;
+    projection_mat(3,3) = 0.f;
 
     //Apply the projection matrix
-    const Vec4f h_projected_coords = projection_mat*homo_coords;
+    const auto h_projected_coords{projection_mat*coords};
 
     //Convert back to 3d, applying perspective divide
-    const auto p_divide = 1.f/h_projected_coords.W();
+    const auto p_divide{1.f/h_projected_coords.W()};
     Vec3f projected_coord(h_projected_coords.X()*p_divide, 
                           h_projected_coords.Y()* p_divide,
                           h_projected_coords.Z()*p_divide);
 
-
+    const auto y_scale{flip_y ? -1.f : 1.f};
     projected_coord[0] = (projected_coord.X()+1)*im_width/2.f;
-    auto y_scale = flip_y ? -1.f : 1.f;
     projected_coord[1] = (y_scale*projected_coord.Y()+1)*im_height/2.f;
 
     //Note we keep the original z coord as the depth.
-    const auto depth = world_coord.Z();
-    return Vec3f{projected_coord.X(),projected_coord.X(), depth};
+    //Consider two vertices that lie on the same projective line.
+    //They will both be projected to the same point, 
+    const auto depth{coords.Z()};
+    return Vec3f{projected_coord.X(),projected_coord.Y(), depth};
 }
+
+struct Camera{
+    Vec3f eye; //Position of the camera
+    Vec3f center; //Direction the camera is looking
+    Norm3f up; //Defines orientation of the camera 
+};
+
 
 
 int main() {
@@ -167,25 +211,46 @@ int main() {
         const auto w1{head.Vertices()[vert_indices[1]]};
         const auto w2{head.Vertices()[vert_indices[2]]};
 
-        //TODO Convert to world space
-        //TODO Convert to camera space
-        //Apply projections to get screen (pixel) coordinates
-        const auto s0{ProjectAndViewPort(w0,image_buffer.Height(),image_buffer.Width(),true)};
-        const auto s1{ProjectAndViewPort(w1,image_buffer.Height(),image_buffer.Width(),true)};
-        const auto s2{ProjectAndViewPort(w2,image_buffer.Height(),image_buffer.Width(),true)};
+        //Convert to homogeneous coords.
+        auto homo0 = Vec4f{w0,1.f};
+        auto homo1 = Vec4f{w1,1.f};
+        auto homo2 = Vec4f{w2,1.f};
 
+        //Convert to world space
+        //Use SORT for order of operations (Scale -> Rotate -> Translate)
+        auto model_matrix = Mat4f::Identity();
+        model_matrix = Translate(model_matrix, Vec3f{0.f,0.f,-2.f});
+        homo0 = model_matrix*homo0;
+        homo1 = model_matrix*homo1;
+        homo2 = model_matrix*homo2;
+
+
+        //Convert to camera space
+        const auto eye = Vec3f{0.f,0.f,1.f};
+        const auto center = Vec3f{0.f,0.f,-1.f};
+        const auto up = Vec3f{0.f,1.f,0.f};
+        Mat4f view_matrix = LookAt(eye, center, up);
+        homo0 = view_matrix*homo0;
+        homo1 = view_matrix*homo1;
+        homo2 = view_matrix*homo2;
+
+
+        //Apply projection and viewport to get screen (pixel) coordinates
+
+        //TODO what about transform to ndc?
+        const auto s0{ProjectAndViewPort(homo0,image_buffer.Height(),image_buffer.Width(),true)};
+        const auto s1{ProjectAndViewPort(homo1,image_buffer.Height(),image_buffer.Width(),true)};
+        const auto s2{ProjectAndViewPort(homo2,image_buffer.Height(),image_buffer.Width(),true)};
 
         //Get the texture coordinates
         const auto t0 = head.TexCoords()[tex_indices[0]];
         const auto t1 = head.TexCoords()[tex_indices[1]];
         const auto t2 = head.TexCoords()[tex_indices[2]];
 
-
-
         //Scale them to the texture map
         //Note we Need to flip the v axis
-        const auto tw = texture_map.Width();
-        const auto th = texture_map.Height(); 
+        const auto tw{texture_map.Width()};
+        const auto th{texture_map.Height()}; 
         const auto uv0 = Vec2f{t0.U()*tw, th-t0.V()*th};
         const auto uv1 = Vec2f{t1.U()*tw, th-t1.V()*th};
         const auto uv2 = Vec2f{t2.U()*tw, th-t2.V()*th};
@@ -202,14 +267,9 @@ int main() {
         }
 
         //Store the attributes in a Vertex object
-        const ScreenVertex a{Vec2f{s0.X(),s0.Y()}, uv0, s0.Z()};
-        const ScreenVertex b{Vec2f{s1.X(),s1.Y()}, uv1, s1.Z()};
-        const ScreenVertex c{Vec2f{s2.X(),s2.Y()}, uv2, s2.Z()};
-
-        std::cout<<s0.X()<<','<<s0.Y()<<','<<uv0[0]<<','<<uv0[1]<<','<<s0.Z()<<'\n';
-        std::cout<<s1.X()<<','<<s1.Y()<<','<<uv1[0]<<','<<uv1[1]<<','<<s1.Z()<<'\n';
-        std::cout<<s2.X()<<','<<s2.Y()<<','<<uv2[0]<<','<<uv2[1]<<','<<s2.Z()<<'\n';
-
+        const ScreenVertex a{Vec2f{s0.X(),s0.Y()}, uv0, w0.Z()};
+        const ScreenVertex b{Vec2f{s1.X(),s1.Y()}, uv1, w1.Z()};
+        const ScreenVertex c{Vec2f{s2.X(),s2.Y()}, uv2, w2.Z()};
 
         const Triangle triangle{a,b,c, col};
         RasteriseAndColor(triangle, image_buffer, depth_buffer, texture_map);
