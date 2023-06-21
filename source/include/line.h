@@ -131,7 +131,6 @@ inline void DrawLine(int x0, int y0, int x1, int y1, Buffer<Color3f>& image) {
         DrawSELine(x0, y0, x1, y1, image, white);
 
     }
-
     else {
         DrawSLine(x0, y0, x1, y1, image, white);
     }

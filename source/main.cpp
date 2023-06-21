@@ -7,38 +7,14 @@
 #include <numeric>
 
 #include "buffer.h"
+#include "camera.h"
 #include "line.h"
 #include "math.h"
 #include "model.h"
 #include "ppm_image.h"
 #include "vec.h"
 #include "mat.h"
-
-
-/*
-OVERVIEW
-//Initialise image, camera etc...
-for(const auto& entity: Scene) {
-    for(const auto& triangle : entity) {
-        auto Projected = Project(triangle)
-        Rasterise(triangle, image);
-        Shade(triangle)
-    }
-}
-*/
-
-[[nodiscard]] float InterpolateDepth(std::span<const float,3> bary, std::span<const float, 3> v_depth) {
-    return std::inner_product(bary.begin(), bary.end(), v_depth.begin(), 0.f);
-};
-
-//cam_dist is the z-distance of the camera from the origin
-[[nodiscard]]  Mat4f CreateProjMat(const Vec3f& eye, const Vec3f& center) {
-    auto p = Mat4f::Identity();
-    p(3,2) = -1.f/(eye-center).Length();
-    return p;
-}
-
-
+#include "pipeline.h"
 
 //A vertex consists of a geometric position and a color
 //Note the coordinates are in 2D screen space (pixels) with the 3rd coordinate being the depth 
@@ -85,15 +61,6 @@ void RasteriseAndColor(const Triangle& triangle, Buffer<Color3f>& image_buf, Buf
                 const auto& [l0,l1,l2] = bary_coords.value(); //unpack barycentric coordinates
                 const auto& [v0,v1,v2] = triangle.vertices; //Unpack vertices of triangle
 
-                //For all per-vertex attributes, we can now interpolate using barycentric coords (just color for now)
-                //For example, the red component at pixel p is the weighted sum of the red components of t, weighted by barycentric coords
-                //Note that v0.col is the RGB color of the 1st vertex of the triangle 
-                //THIS IS CALLED GOURAD INTERPOLATION
-                // const auto r = l0*v0.col.R() + l1*v1.col.R() + l2*v2.col.R();
-                // const auto g = l0*v0.col.G() + l1*v1.col.G() + l2*v2.col.G();
-                // const auto b = l0*v0.col.B() + l1*v1.col.B() + l2*v2.col.B();
-                // auto col = Color3{r,g,b};
-
                 //Get texture coords via interpolation
                 const auto tex_u{l0*v0.tex_coords[0] + l1*v1.tex_coords[0] + l2*v2.tex_coords[0]};
                 const auto tex_v{l0*v0.tex_coords[1] + l1*v1.tex_coords[1] + l2*v2.tex_coords[1]};
@@ -102,10 +69,10 @@ void RasteriseAndColor(const Triangle& triangle, Buffer<Color3f>& image_buf, Buf
                 auto col{texture_map.Get(tex_u,tex_v)};
 
                 //Lighting                                                       
-                col*=triangle.intensity[0]; 
+                col=col*triangle.intensity; 
 
                 //Use Z buffer for hidden surface removal
-                const auto z{InterpolateDepth(bary_coords.value(), std::array{v0.depth_,v1.depth_,v2.depth_})};
+                const auto z{l0*v0.depth_ + l1*v1.depth_ + l2*v2.depth_};
                 if(z>depth_buf.Get(x,y)) {
                     depth_buf.Set(x,y,z);
                     image_buf.Set(x,y,col);
@@ -114,76 +81,6 @@ void RasteriseAndColor(const Triangle& triangle, Buffer<Color3f>& image_buf, Buf
         }
     }
 }
-
-
-/// @brief Builds a view matrix.In other words, Defines the camera
-/// @brief Technically constructs a matrix that transforms vectors in the standard basis to vectors in the camera basis.
-/// @brief By convention, the camera will be facing in the -z direction
-/// @param eye Position of the camera
-/// @param center Direction in which the camera is facing
-/// @param up Defines the orientation of the camera
-/// @return View matrix
-Mat4f LookAt(const Vec3f& eye, const Vec3f& center, const Vec3f& up) {
-    //Construct an orthonormal basis
-    const auto z = Norm3f{eye - center}; //'forward' axis. By convention, the camera should be facing in the -z direction
-    const auto x = Norm3f{Cross<float,3>(up,z)}; //'left' axis
-    const auto y = Norm3f{Cross<float, 3>(z,x)}; //'up' axis
-        
-    //The goal of the view matrix is to transform from our standard basis to the camera basis.
-    //Therefore the view matrix is just the inverse of the transformation matrix from the standard basis to our camera basis.
-    //Since the camera basis is orthogonal, the inverse is equivalent to the transpose
-    Mat4f view_matrix;
-    for (int i=0; i<3; i++) {
-    view_matrix(0,i) = x[i];
-    view_matrix(1,i) = y[i];
-    view_matrix(2,i) = z[i];
-    view_matrix(i,3) = -eye[i];
-    }
-    return view_matrix;
-}
-
-
-/// @brief Projects a point 
-/// @brief Note the z coordinate of the original point is kept as the depth
-/// @param coords Coordinates of the point to be projected (should be in camera space) 
-/// @param eye 
-/// @param center 
-/// @param im_height 
-/// @param im_width 
-/// @param flip_y 
-/// @return 3D vectors containing the coordinates of the projected point, along with the depth 
-Vec3f ProjectAndViewPort(const Vec4f& coords, int im_height, int im_width, bool flip_y) { 
-
-    //Define projection matrix
-    auto projection_mat = Mat4f::Identity();
-    projection_mat(3,2) = -1.f;
-    projection_mat(3,3) = 0.f;
-
-    //Apply the projection matrix
-    const auto h_projected_coords{projection_mat*coords};
-
-    //Convert back to 3d, applying perspective divide
-    const auto p_divide{1.f/h_projected_coords.W()};
-    Vec3f projected_coord(h_projected_coords.X()*p_divide, 
-                          h_projected_coords.Y()* p_divide,
-                          h_projected_coords.Z()*p_divide);
-
-    const auto y_scale{flip_y ? -1.f : 1.f};
-    projected_coord[0] = (projected_coord.X()+1)*im_width/2.f;
-    projected_coord[1] = (y_scale*projected_coord.Y()+1)*im_height/2.f;
-
-    //Note we keep the original z coord as the depth.
-    //Consider two vertices that lie on the same projective line.
-    //They will both be projected to the same point, 
-    const auto depth{coords.Z()};
-    return Vec3f{projected_coord.X(),projected_coord.Y(), depth};
-}
-
-struct Camera{
-    Vec3f eye; //Position of the camera
-    Vec3f center; //Direction the camera is looking
-    Norm3f up; //Defines orientation of the camera 
-};
 
 
 
@@ -200,9 +97,15 @@ int main() {
     //Load texture for model
     Buffer<Color3f> texture_map = ParsePPMTexture("assets/textures/head_diffuse.ppm");
 
+    //Initialise scene entities
+    const Camera camera(Vec3f{0.f,0.f,0.f},
+                  Vec3f{0.f,0.f,-1.f},
+                  Vec3f{0.f,1.f,0.f});
+    
+    //Directional (distant) light
     Norm3f light_dir{Vec3f{0.f,0.f,-5.f}};
 
-    // //Iterate over each face (triangle) in the model
+    //Iterate over each face (triangle) in the model
     for(const auto& [vert_indices, tex_indices] : head.Faces()) {
 
 
@@ -219,28 +122,30 @@ int main() {
         //Convert to world space
         //Use SORT for order of operations (Scale -> Rotate -> Translate)
         auto model_matrix = Mat4f::Identity();
-        model_matrix = Translate(model_matrix, Vec3f{0.f,0.f,-2.f});
+        model_matrix = Translate(model_matrix, Vec3f{0.f,0.f,-1.2f});
         homo0 = model_matrix*homo0;
         homo1 = model_matrix*homo1;
         homo2 = model_matrix*homo2;
 
-
         //Convert to camera space
-        const auto eye = Vec3f{0.f,0.f,1.f};
-        const auto center = Vec3f{0.f,0.f,-1.f};
-        const auto up = Vec3f{0.f,1.f,0.f};
-        Mat4f view_matrix = LookAt(eye, center, up);
+        Mat4f view_matrix = LookAt(camera.eye, camera.center, camera.up);
         homo0 = view_matrix*homo0;
         homo1 = view_matrix*homo1;
         homo2 = view_matrix*homo2;
 
 
-        //Apply projection and viewport to get screen (pixel) coordinates
+        //Apply projection to convert to NDC
+        const auto n0{Project(homo0, -0.5f,-10.f,-1.f,1.f,-1.f,1.f)};
+        const auto n1{Project(homo1, -0.5f,-10.f,-1.f,1.f,-1.f,1.f)};
+        const auto n2{Project(homo2, -0.5f,-10.f,-1.f,1.f,-1.f,1.f)};
 
-        //TODO what about transform to ndc?
-        const auto s0{ProjectAndViewPort(homo0,image_buffer.Height(),image_buffer.Width(),true)};
-        const auto s1{ProjectAndViewPort(homo1,image_buffer.Height(),image_buffer.Width(),true)};
-        const auto s2{ProjectAndViewPort(homo2,image_buffer.Height(),image_buffer.Width(),true)};
+        if((!n0) || (!n1) || (!n2)) continue;
+        
+        //Apply viewport to convert to screen coordinates
+        const auto s0{ViewPort(n0.value(), image_buffer.Height(),image_buffer.Width(),true)};
+        const auto s1{ViewPort(n1.value(), image_buffer.Height(),image_buffer.Width(),true)};
+        const auto s2{ViewPort(n2.value(), image_buffer.Height(),image_buffer.Width(),true)};
+
 
         //Get the texture coordinates
         const auto t0 = head.TexCoords()[tex_indices[0]];
@@ -274,6 +179,13 @@ int main() {
         const Triangle triangle{a,b,c, col};
         RasteriseAndColor(triangle, image_buffer, depth_buffer, texture_map);
     }
+
+    
+
+
+
+
+
 
     //Create image from buffer and write to file
     PPMImage image{std::move(image_buffer)};

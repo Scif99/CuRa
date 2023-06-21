@@ -39,11 +39,8 @@ private:
     std::vector<Face> faces_;
 
     void Parse(std::string_view filename);
-
-
     Vec3f ParseOBJVertexPos(std::string_view line); //Parses a geometric vertex line from an obj file
     Vec2f ParseOBJTexCoords(std::string_view line); 
-    
     Face ParseOBJFaceIndices(std::string_view line);
     
 
@@ -83,7 +80,7 @@ Vec2f Model::ParseOBJTexCoords(std::string_view line) {
 //Example of input 'f 6/4/1 3/5/3 7/6/5'
 //Example of output {6,3,7},{3,5,3}  ({position}, {tex_coord})
 //Each 'word' stores indices to attribute data
-//NOTE THE INDICES START FROM 1
+//NOTE INDICES IN THE OBJ FILE START FROM 1
 //Extracts the indices of the vertex position and texture coords
 Face Model::ParseOBJFaceIndices(std::string_view line) {
 

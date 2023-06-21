@@ -1,6 +1,7 @@
-
+#ifndef MAT_H
+#define MAT_H
 #include <array>
-
+#include <iostream>
 #include "vec.h"
 
 
@@ -66,7 +67,9 @@ inline void Mat4f::Transpose() {
     Vec4f ans;
     for(int i =0; i<4;++i) {
         for(int j = 0;j<4;++j) {
+        // {std::cout<<lhs(i,j)<<','<<rhs[j]<<','<<lhs(i,j)*rhs[j]<<'\n';}
             ans[i]+= lhs(i,j)*rhs[j];
+
         }
     }
     return ans;
@@ -98,3 +101,5 @@ inline void Mat4f::Transpose() {
     Mat4f tr = Mat4f(std::move(data));
     return tr*a;
 }
+
+#endif

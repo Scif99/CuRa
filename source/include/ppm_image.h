@@ -13,8 +13,7 @@
 
 
 class PPMImage {
-private:
-
+private:    
     Buffer<Color3f> buffer_; //image data. Note that the color range is [0,1] and not [0,255]
 public:
     PPMImage(int height, int width)
