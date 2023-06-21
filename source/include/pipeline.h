@@ -19,21 +19,35 @@
 /// @return View matrix
 Mat4f LookAt(const Vec3f& eye, const Vec3f& center, const Vec3f& up) {
     //Construct an orthonormal basis
-    const auto z = Norm3f{eye - center}; //'forward' axis. By convention, the camera should be facing in the -z direction
-    const auto x = Norm3f{Cross<float,3>(up,z)}; //'left' axis
-    const auto y = Norm3f{Cross<float, 3>(z,x)}; //'up' axis
+    const auto w = Norm3f{eye - center}; //'forward' axis. By convention, the camera should be facing in the -z direction
+    const auto u = Norm3f{Cross<float,3>(up,w)}; //'right' axis
+    const auto v = Norm3f{Cross<float, 3>(w,u)}; //'up' axis
         
-    //The goal of the view matrix is to transform from our standard basis to the camera basis.
+    //The goal of the view matrix is to transform from our standard basis to the camera basis
+    //NOTE: Don't forget the translation.
     //Therefore the view matrix is just the inverse of the transformation matrix from the standard basis to our camera basis.
-    //Since the camera basis is orthogonal, the inverse is equivalent to the transpose
-    Mat4f view_matrix;
-    for (int i=0; i<3; i++) {
-    view_matrix(0,i) = x[i];
-    view_matrix(1,i) = y[i];
-    view_matrix(2,i) = z[i];
-    view_matrix(i,3) = -eye[i];
-    }
-    return view_matrix;
+    //To avoid inverting any matrices, note that the inverse is equivalent to composing the inverse translation with the inverse transformation matrix, which is orthogonal.
+    
+    //Define the inverse transformation matrix
+    //It is the transpose of the transformation matrix
+    Mat4f transform({
+        u[0], u[1], u[2], 0.f,
+        v[0], v[1], v[2], 0.f,
+        w[0], w[1], w[2], 0.f,
+        0.f,  0.f,  0.f,  1.f
+    });
+
+    //The inverse of the matrix that translates the standard origin to the camera origin
+    //This is equivalent to a translation that reverses this movement
+    Mat4f translate({
+    1.f,  0.f,  0.f,  -eye[0],
+    0.f,  1.f,  0.f,  -eye[1],
+    0.f,  0.f,  1.f,  -eye[2],
+    0.f,  0.f,  0.f,  1.f
+    });
+
+    //The view matrix is the composition of these matrices
+    return transform*translate;
 }
 
 
@@ -57,21 +71,6 @@ Mat4f Projection(float n, float f, float l, float r, float b, float t) {
     };
     const Mat4f projection_mat(std::move(data));
     return projection_mat;
-    //Apply the projection matrix
-    // const auto h_projected_coords{projection_mat*coords};
-
-    // //Clip in homogeneous coordinates
-    // // if(h_projected_coords.X() < w || h_projected_coords.X() > -w || 
-    // //    -h_projected_coords.Y() < w || -h_projected_coords.Y() > -w || 
-    // //    -h_projected_coords.Z() < w || -h_projected_coords.Z() > -w ) 
-    // //    return std::nullopt; 
-
-    // //Convert back to 3d, applying perspective divide
-    // const auto p_divide{1.f/h_projected_coords.W()};
-    // const Vec3f projected_coord(h_projected_coords.X()*p_divide, 
-    //                             h_projected_coords.Y()*p_divide,
-    //                             h_projected_coords.Z()*p_divide);
-    // return projected_coord;
 }
 
 
@@ -86,7 +85,7 @@ Vec3f ViewPort(const Vec3f& ndc_coords, int im_height, int im_width, bool flip_y
     const auto y_scale{flip_y ? -1.f : 1.f};
     const auto x_pixel = (ndc_coords.X()+1)*im_width/2.f;
     const auto y_pixel = (y_scale*ndc_coords.Y()+1)*im_height/2.f;
-    return Vec3f(x_pixel,y_pixel,ndc_coords.Z());
+    return Vec3f(x_pixel,y_pixel, ndc_coords.Z());
 }
 
 #endif

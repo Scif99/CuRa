@@ -73,7 +73,7 @@ void RasteriseAndColor(const Triangle& triangle, Buffer<Color3f>& image_buf, Buf
                 col=col*triangle.intensity; 
 
                 //Use Z buffer for hidden surface removal
-                const auto z{l0*v0.depth + l1*v1.depth + l2*v2.depth};
+                const auto z = float{l0*v0.depth + l1*v1.depth + l2*v2.depth};
                 if(z>depth_buf.Get(x,y)) {
                     depth_buf.Set(x,y,z);
                     image_buf.Set(x,y,col);
@@ -112,7 +112,7 @@ int main() {
         auto model_matrix = Mat4f::Identity();
         model_matrix = Translate(model_matrix, Vec3f{0.f,0.f,-1.2f});
         Mat4f view_matrix = LookAt(camera.eye, camera.center, camera.up);
-        Mat4f proj_matrix = Projection(-0.3f,-3.f,-1.f,1.f,-1.f,1.f);
+        Mat4f proj_matrix = Projection(-0.5f,-2.5f,-1.f,1.f,-1.f,1.f);
 
         std::array<Vec4f,3> world;
         for(int i =0;i<3;++i) {world[i] = model_matrix* Vec4f(head.Vertices()[vert_indices[i]],1.f); }
@@ -122,46 +122,11 @@ int main() {
             auto v = proj_matrix*view_matrix*world[i]; 
             //if(!v) continue;
             const auto p_divide{1.f/v.W()};
+
             auto v_clip = Cartesian(v*p_divide);
             v_clip = ViewPort(v_clip,image_buffer.Height(),image_buffer.Width(), true);
             vertices[i] = std::move(v_clip);
         }
-
-
-        // //Get the coordinates in local space     
-        // const auto w0{head.Vertices()[vert_indices[0]]};
-        // const auto w1{head.Vertices()[vert_indices[1]]};
-        // const auto w2{head.Vertices()[vert_indices[2]]};
-
-        // //Convert to homogeneous coords.
-        // auto homo0 = Vec4f{w0,1.f};
-        // auto homo1 = Vec4f{w1,1.f};
-        // auto homo2 = Vec4f{w2,1.f};
-
-        // //Convert to world space
-        // //Use SORT for order of operations (Scale -> Rotate -> Translate)
-        // homo0 = model_matrix*homo0;
-        // homo1 = model_matrix*homo1;
-        // homo2 = model_matrix*homo2;
-
-        // //Convert to camera space
-        // homo0 = view_matrix*homo0;
-        // homo1 = view_matrix*homo1;
-        // homo2 = view_matrix*homo2;
-
-
-        // //Apply projection to convert to NDC
-        // const auto n0{Project(homo0, -0.5f,-10.f,-1.f,1.f,-1.f,1.f)};
-        // const auto n1{Project(homo1, -0.5f,-10.f,-1.f,1.f,-1.f,1.f)};
-        // const auto n2{Project(homo2, -0.5f,-10.f,-1.f,1.f,-1.f,1.f)};
-
-        // if((!n0) || (!n1) || (!n2)) continue;
-
-        // //Apply viewport to convert to screen coordinates
-        // const auto s0{ViewPort(n0.value(), image_buffer.Height(),image_buffer.Width(),true)};
-        // const auto s1{ViewPort(n1.value(), image_buffer.Height(),image_buffer.Width(),true)};
-        // const auto s2{ViewPort(n2.value(), image_buffer.Height(),image_buffer.Width(),true)};
-
 
         //Get the texture coordinates
         const auto t0 = head.TexCoords()[tex_indices[0]];
