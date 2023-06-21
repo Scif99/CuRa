@@ -46,7 +46,7 @@ Mat4f LookAt(const Vec3f& eye, const Vec3f& center, const Vec3f& up) {
 /// @param im_width 
 /// @param flip_y 
 /// @return 3D vectors containing the coordinates of the projected point, along with the depth 
-std::optional<Vec3f> Project(const Vec4f& coords, float n, float f, float l, float r, float b, float t) { 
+Mat4f Projection(float n, float f, float l, float r, float b, float t) { 
 
     assert(l<r && b<t && n > f);
     const std::array<float, 16> data = {
@@ -56,22 +56,22 @@ std::optional<Vec3f> Project(const Vec4f& coords, float n, float f, float l, flo
         0.f,         0.f,         1.f,         0.f
     };
     const Mat4f projection_mat(std::move(data));
-
+    return projection_mat;
     //Apply the projection matrix
-    const auto h_projected_coords{projection_mat*coords};
+    // const auto h_projected_coords{projection_mat*coords};
 
-    //Clip in homogeneous coordinates
-    // if(h_projected_coords.X() < w || h_projected_coords.X() > -w || 
-    //    -h_projected_coords.Y() < w || -h_projected_coords.Y() > -w || 
-    //    -h_projected_coords.Z() < w || -h_projected_coords.Z() > -w ) 
-    //    return std::nullopt; 
+    // //Clip in homogeneous coordinates
+    // // if(h_projected_coords.X() < w || h_projected_coords.X() > -w || 
+    // //    -h_projected_coords.Y() < w || -h_projected_coords.Y() > -w || 
+    // //    -h_projected_coords.Z() < w || -h_projected_coords.Z() > -w ) 
+    // //    return std::nullopt; 
 
-    //Convert back to 3d, applying perspective divide
-    const auto p_divide{1.f/h_projected_coords.W()};
-    const Vec3f projected_coord(h_projected_coords.X()*p_divide, 
-                                h_projected_coords.Y()*p_divide,
-                                h_projected_coords.Z()*p_divide);
-    return projected_coord;
+    // //Convert back to 3d, applying perspective divide
+    // const auto p_divide{1.f/h_projected_coords.W()};
+    // const Vec3f projected_coord(h_projected_coords.X()*p_divide, 
+    //                             h_projected_coords.Y()*p_divide,
+    //                             h_projected_coords.Z()*p_divide);
+    // return projected_coord;
 }
 
 

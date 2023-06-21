@@ -5,6 +5,7 @@
 #include <span>
 #include <vector>
 #include <numeric>
+#include <algorithm>
 
 #include "buffer.h"
 #include "camera.h"
@@ -21,7 +22,7 @@
 struct ScreenVertex {
     Vec2f pixel_coords;
     Vec2f tex_coords;
-    float depth_;
+    float depth;
 };
 
 //Note that the vertices need to be specified in CCW order
@@ -72,7 +73,7 @@ void RasteriseAndColor(const Triangle& triangle, Buffer<Color3f>& image_buf, Buf
                 col=col*triangle.intensity; 
 
                 //Use Z buffer for hidden surface removal
-                const auto z{l0*v0.depth_ + l1*v1.depth_ + l2*v2.depth_};
+                const auto z{l0*v0.depth + l1*v1.depth + l2*v2.depth};
                 if(z>depth_buf.Get(x,y)) {
                     depth_buf.Set(x,y,z);
                     image_buf.Set(x,y,col);
@@ -99,8 +100,8 @@ int main() {
 
     //Initialise scene entities
     const Camera camera(Vec3f{0.f,0.f,0.f},
-                  Vec3f{0.f,0.f,-1.f},
-                  Vec3f{0.f,1.f,0.f});
+                        Vec3f{0.f,0.f,-1.f},
+                        Vec3f{0.f,1.f,0.f});
     
     //Directional (distant) light
     Norm3f light_dir{Vec3f{0.f,0.f,-5.f}};
@@ -108,43 +109,58 @@ int main() {
     //Iterate over each face (triangle) in the model
     for(const auto& [vert_indices, tex_indices] : head.Faces()) {
 
-
-        //Get the coordinates in local space     
-        const auto w0{head.Vertices()[vert_indices[0]]};
-        const auto w1{head.Vertices()[vert_indices[1]]};
-        const auto w2{head.Vertices()[vert_indices[2]]};
-
-        //Convert to homogeneous coords.
-        auto homo0 = Vec4f{w0,1.f};
-        auto homo1 = Vec4f{w1,1.f};
-        auto homo2 = Vec4f{w2,1.f};
-
-        //Convert to world space
-        //Use SORT for order of operations (Scale -> Rotate -> Translate)
         auto model_matrix = Mat4f::Identity();
         model_matrix = Translate(model_matrix, Vec3f{0.f,0.f,-1.2f});
-        homo0 = model_matrix*homo0;
-        homo1 = model_matrix*homo1;
-        homo2 = model_matrix*homo2;
-
-        //Convert to camera space
         Mat4f view_matrix = LookAt(camera.eye, camera.center, camera.up);
-        homo0 = view_matrix*homo0;
-        homo1 = view_matrix*homo1;
-        homo2 = view_matrix*homo2;
+        Mat4f proj_matrix = Projection(-0.3f,-3.f,-1.f,1.f,-1.f,1.f);
+
+        std::array<Vec4f,3> world;
+        for(int i =0;i<3;++i) {world[i] = model_matrix* Vec4f(head.Vertices()[vert_indices[i]],1.f); }
+
+        std::array<Vec3f, 3> vertices;
+        for(int i =0; i<3; ++i) {
+            auto v = proj_matrix*view_matrix*world[i]; 
+            //if(!v) continue;
+            const auto p_divide{1.f/v.W()};
+            auto v_clip = Cartesian(v*p_divide);
+            v_clip = ViewPort(v_clip,image_buffer.Height(),image_buffer.Width(), true);
+            vertices[i] = std::move(v_clip);
+        }
 
 
-        //Apply projection to convert to NDC
-        const auto n0{Project(homo0, -0.5f,-10.f,-1.f,1.f,-1.f,1.f)};
-        const auto n1{Project(homo1, -0.5f,-10.f,-1.f,1.f,-1.f,1.f)};
-        const auto n2{Project(homo2, -0.5f,-10.f,-1.f,1.f,-1.f,1.f)};
+        // //Get the coordinates in local space     
+        // const auto w0{head.Vertices()[vert_indices[0]]};
+        // const auto w1{head.Vertices()[vert_indices[1]]};
+        // const auto w2{head.Vertices()[vert_indices[2]]};
 
-        if((!n0) || (!n1) || (!n2)) continue;
-        
-        //Apply viewport to convert to screen coordinates
-        const auto s0{ViewPort(n0.value(), image_buffer.Height(),image_buffer.Width(),true)};
-        const auto s1{ViewPort(n1.value(), image_buffer.Height(),image_buffer.Width(),true)};
-        const auto s2{ViewPort(n2.value(), image_buffer.Height(),image_buffer.Width(),true)};
+        // //Convert to homogeneous coords.
+        // auto homo0 = Vec4f{w0,1.f};
+        // auto homo1 = Vec4f{w1,1.f};
+        // auto homo2 = Vec4f{w2,1.f};
+
+        // //Convert to world space
+        // //Use SORT for order of operations (Scale -> Rotate -> Translate)
+        // homo0 = model_matrix*homo0;
+        // homo1 = model_matrix*homo1;
+        // homo2 = model_matrix*homo2;
+
+        // //Convert to camera space
+        // homo0 = view_matrix*homo0;
+        // homo1 = view_matrix*homo1;
+        // homo2 = view_matrix*homo2;
+
+
+        // //Apply projection to convert to NDC
+        // const auto n0{Project(homo0, -0.5f,-10.f,-1.f,1.f,-1.f,1.f)};
+        // const auto n1{Project(homo1, -0.5f,-10.f,-1.f,1.f,-1.f,1.f)};
+        // const auto n2{Project(homo2, -0.5f,-10.f,-1.f,1.f,-1.f,1.f)};
+
+        // if((!n0) || (!n1) || (!n2)) continue;
+
+        // //Apply viewport to convert to screen coordinates
+        // const auto s0{ViewPort(n0.value(), image_buffer.Height(),image_buffer.Width(),true)};
+        // const auto s1{ViewPort(n1.value(), image_buffer.Height(),image_buffer.Width(),true)};
+        // const auto s2{ViewPort(n2.value(), image_buffer.Height(),image_buffer.Width(),true)};
 
 
         //Get the texture coordinates
@@ -163,7 +179,7 @@ int main() {
         //Do some basic per-triangle shading
         //This results in whats called 'flat shading'
         auto col = Color3f{0.f,0.f,0.f};
-        Norm3f norm{Cross<float,3>(w1-w0,w2-w0)};
+        Norm3f norm{Cross<float,3>(Cartesian(world[1])-Cartesian(world[0]),Cartesian(world[2])-Cartesian(world[0]))};
         const float dot = Dot(norm,-light_dir); //-light_dir is the vector from surface to light source
         //Backface culling
         //If the dot product is negative then it means the triangle is not facing the camera (same as light in this case)
@@ -172,20 +188,15 @@ int main() {
         }
 
         //Store the attributes in a Vertex object
-        const ScreenVertex a{Vec2f{s0.X(),s0.Y()}, uv0, w0.Z()};
-        const ScreenVertex b{Vec2f{s1.X(),s1.Y()}, uv1, w1.Z()};
-        const ScreenVertex c{Vec2f{s2.X(),s2.Y()}, uv2, w2.Z()};
+        const ScreenVertex a{Vec2f(vertices[0].X(),vertices[0].Y()), uv0, vertices[0].Z()};
+        const ScreenVertex b{Vec2f(vertices[1].X(),vertices[1].Y()), uv1, vertices[1].Z()};
+        const ScreenVertex c{Vec2f(vertices[2].X(),vertices[2].Y()), uv2, vertices[2].Z()};
 
         const Triangle triangle{a,b,c, col};
         RasteriseAndColor(triangle, image_buffer, depth_buffer, texture_map);
     }
 
     
-
-
-
-
-
 
     //Create image from buffer and write to file
     PPMImage image{std::move(image_buffer)};

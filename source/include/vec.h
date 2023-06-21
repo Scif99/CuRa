@@ -88,6 +88,7 @@ public:
     constexpr Prec LengthSquared() const {return std::inner_product(this->cbegin(),this->cend(),this->cbegin(), static_cast<Prec>(0));}
     constexpr Prec Length() const {return static_cast<Prec>(sqrtl(LengthSquared()));}
 
+
     const auto& Data() const {return elem;}
 
     //Iterators
@@ -103,6 +104,7 @@ public:
 
 };
 
+
 //Aliases
 using Vec2f = Vec<float, 2>;
 using Point2f = Vec<float, 2>;
@@ -117,6 +119,8 @@ using Point2d = Vec<double, 2>;
 using Vec3d = Vec<double,3>;
 using Color3d = Vec<double, 3>;
 using Point3d = Vec<double, 3>;
+
+    constexpr Vec3f Cartesian(const Vec4f& h) {return Vec3f{h[0],h[1],h[2]};}
 
 template<Decimal Prec, std::size_t Dim>
 inline constexpr bool operator == (const Vec<Prec, Dim>& lhs, const Vec<Prec, Dim>& rhs)
