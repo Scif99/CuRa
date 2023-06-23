@@ -1,2 +1,4 @@
 
 
+TODO
+- Constexpr the things

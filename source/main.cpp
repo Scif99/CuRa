@@ -16,33 +16,39 @@
 #include "vec.h"
 #include "mat.h"
 #include "pipeline.h"
+#include "light.h"
 
-//A vertex consists of a geometric position and a color
-//Note the coordinates are in 2D screen space (pixels) with the 3rd coordinate being the depth 
+//Contains all the per-vertex attributes
 struct ScreenVertex {
-    Vec2f pixel_coords;
+    Vec3f screen_coords; //contains the 2D screen coordinates, as well as the depth
     Vec2f tex_coords;
-    float depth;
+    Vec3f normal_coords;
+    Color3f diffuse;
 };
 
 //Note that the vertices need to be specified in CCW order
 struct Triangle {
     std::array<ScreenVertex, 3> vertices;
-    Color3f intensity;
 };
 
 
 //Checks whether a pixel coordinate is occupied by a triangle
 //If true, returns the barycentric coordinates at the pixel location
 [[nodiscard]] std::optional<std::array<float,3>> Opt_InTriangle(const Vec2f& p, const Triangle& t) {
-    const auto& [v0,v1,v2] = t.vertices; //Unpack vertices of triangle
-    auto l0{EdgeFunction(v1.pixel_coords, v2.pixel_coords, p)}; // signed area of the triangle v1v2p multiplied by 2
-    auto l1{EdgeFunction(v2.pixel_coords, v0.pixel_coords, p)}; // signed area of the triangle v2v0p multiplied by 2
-    auto l2{EdgeFunction(v0.pixel_coords, v1.pixel_coords, p)}; // signed area of the triangle v0v1p multiplied by 2
+
+    //Extract 2D screen coordinates of each vertex
+    const auto& v0 = Vec2f(t.vertices[0].screen_coords.X(),t.vertices[0].screen_coords.Y());
+    const auto& v1 = Vec2f(t.vertices[1].screen_coords.X(),t.vertices[1].screen_coords.Y());
+    const auto& v2 = Vec2f(t.vertices[2].screen_coords.X(),t.vertices[2].screen_coords.Y());
+
+    auto l0{EdgeFunction(v1, v2, p)}; // signed area of the triangle v1v2p multiplied by 2
+    auto l1{EdgeFunction(v2, v0, p)}; // signed area of the triangle v2v0p multiplied by 2
+    auto l2{EdgeFunction(v0, v1, p)}; // signed area of the triangle v0v1p multiplied by 2
 
     // Check if the pixel lies inside the triangle
     if (l0 >= 0 && l1 >= 0 && l2 >= 0) {
-        const auto area = float{EdgeFunction(v0.pixel_coords, v1.pixel_coords, v2.pixel_coords)}; // The edge function with a triangles vertices as its arguments results in twice the area of triangle
+         // The edge function with a triangles vertices as its arguments results in twice the area of triangle
+        const auto area = float{EdgeFunction(v0, v1, v2)};
         // Compute barycentric coordinates
         l0 /= area;
         l1 /= area;
@@ -63,34 +69,33 @@ void RasteriseAndColor(const Triangle& triangle, Buffer<Color3f>& image_buf, Buf
                 const auto& [v0,v1,v2] = triangle.vertices; //Unpack vertices of triangle
 
                 //Get texture coords via interpolation
-                const auto tex_u{l0*v0.tex_coords[0] + l1*v1.tex_coords[0] + l2*v2.tex_coords[0]};
-                const auto tex_v{l0*v0.tex_coords[1] + l1*v1.tex_coords[1] + l2*v2.tex_coords[1]};
-                
+                const Vec2f tex = l0*v0.tex_coords + l1*v1.tex_coords + l2*v2.tex_coords;
+             
                 //USE TEXTURE COORDS TO GET COLOR
-                auto col{texture_map.Get(tex_u,tex_v)};
+                auto fragment_color{texture_map.Get(tex.U(),tex.V())};
 
-                //Lighting                                                       
-                col=col*triangle.intensity; 
+                //Lighting
+                //interpolate over colors
+                const auto interpolated_diffuse = l0*v0.diffuse + l1*v1.diffuse + l2*v2.diffuse;
+                fragment_color=fragment_color*interpolated_diffuse;
 
                 //Use Z buffer for hidden surface removal
-                const auto z = float{l0*v0.depth + l1*v1.depth + l2*v2.depth};
+                const auto z = float{l0*v0.screen_coords.Z() + l1*v1.screen_coords.Z() + l2*v2.screen_coords.Z()};
                 if(z>depth_buf.Get(x,y)) {
                     depth_buf.Set(x,y,z);
-                    image_buf.Set(x,y,col);
+                    image_buf.Set(x,y,fragment_color);
                 }
             }
         }
     }
 }
 
-
-
 int main() {
 
 	constexpr int height{800};
 	constexpr int width{800};
-    
-    Buffer<Color3f> image_buffer(height, width); //Create Depth buffer Assume +z is towards camera?
+
+    Buffer<Color3f> image_buffer(height, width);
     Buffer<float> depth_buffer(height, width, -std::numeric_limits<float>::max()); //Create Depth buffer Assume +z is towards camera?
 
     //Load model
@@ -104,64 +109,77 @@ int main() {
                         Vec3f{0.f,1.f,0.f});
     
     //Directional (distant) light
-    Norm3f light_dir{Vec3f{0.f,0.f,-5.f}};
+    const Norm3f light_dir{Vec3f{0.f,0.f,-5.f}};
+    const DistantLight light = {light_dir, Color3f{1.f,1.f,1.f}};
+
+    //Define the MVP matrices for the model
+    auto model_matrix = Mat4f::Identity();
+    model_matrix = Translate(model_matrix, Vec3f{0.f,0.f,-1.2f});
+    Mat4f view_matrix = LookAt(camera.eye, camera.center, camera.up);
+    Mat4f proj_matrix = Projection(-0.5f,-2.5f,-1.f,1.f,-1.f,1.f);
 
     //Iterate over each face (triangle) in the model
-    for(const auto& [vert_indices, tex_indices] : head.Faces()) {
+    for(const auto& [vert_indices, tex_indices, norm_indices] : head.Faces()) {
 
-        auto model_matrix = Mat4f::Identity();
-        model_matrix = Translate(model_matrix, Vec3f{0.f,0.f,-1.2f});
-        Mat4f view_matrix = LookAt(camera.eye, camera.center, camera.up);
-        Mat4f proj_matrix = Projection(-0.5f,-2.5f,-1.f,1.f,-1.f,1.f);
-
+        //We need the world coordinates for lighting
         std::array<Vec4f,3> world;
         for(int i =0;i<3;++i) {world[i] = model_matrix* Vec4f(head.Vertices()[vert_indices[i]],1.f); }
 
-        std::array<Vec3f, 3> vertices;
+        //Pass vertices through transforms
+        std::array<ScreenVertex,3> vertices;
+        bool discard = false;
         for(int i =0; i<3; ++i) {
-            auto v = proj_matrix*view_matrix*world[i]; 
+            //VERTEX POSITIONS
+            //TRANSFORM TO CLIP SPACE VIA MVP
+            auto v_clip = proj_matrix*view_matrix*world[i]; 
+            //CLIP
             //if(!v) continue;
-            const auto p_divide{1.f/v.W()};
+            //TRANSFORM TO NDC SPACE VIA PERSPECTIVE DIVIDE 
+            const auto p_divide{1.f/v_clip.W()};
+            const auto v_ndc = Cartesian(v_clip*p_divide);
+            //TRANSFORM TO SCREEN SPACE VIA VIEWPORT
+            const auto v_screen = ViewPort(v_ndc,image_buffer.Height(),image_buffer.Width(), true);
+            vertices[i].screen_coords = std::move(v_screen);
 
-            auto v_clip = Cartesian(v*p_divide);
-            v_clip = ViewPort(v_clip,image_buffer.Height(),image_buffer.Width(), true);
-            vertices[i] = std::move(v_clip);
+            //TEXTURE COORDS
+            const auto tex_coords = head.TexCoords()[tex_indices[i]]; //Get from model
+            const auto tw{texture_map.Width()};
+            const auto th{texture_map.Height()}; 
+            const auto uv = Vec2f{tex_coords.U()*tw, th-tex_coords.V()*th}; //Scale (flipping in v direction)
+            vertices[i].tex_coords = std::move(uv);
+
+            //NORMAL
+            const auto normal_transform = Invert(Transpose(model_matrix)).value();//Note the normal transforms differently to point vectors
+            const auto local_norm = head.Normals()[norm_indices[i]];
+            //Transform to world space
+            const auto world_norm = normal_transform*Vec4f(local_norm,1.f);
+            vertices[i].normal_coords = UnitVector(Cartesian(world_norm));
+
+            //PER-VERTEX SHADING
+            
+            //GOURAD SHADING
+            auto col = Color3f{0.f,0.f,0.f};
+            const float dot = Dot(UnitVector(vertices[i].normal_coords) ,-light.Direction);
+            vertices[i].diffuse = dot*light.Color;
+
+            //FLAT SHADING
+            //Norm3f triangle_norm{Cross<float,3>(Cartesian(world[1])-Cartesian(world[0]),Cartesian(world[2])-Cartesian(world[0]))};
+            //const float dot = Dot(triangle_norm ,-light.Direction); 
+            //vertices[i].diffuse = dot*light.Color;
+
+            //Backface culling
+            //If the dot product is negative then it means the triangle is not facing the camera (same as light in this case)
+            if(dot<0.f) {
+                discard = true;
+                break;
+            }
         }
+        if(discard) continue; 
 
-        //Get the texture coordinates
-        const auto t0 = head.TexCoords()[tex_indices[0]];
-        const auto t1 = head.TexCoords()[tex_indices[1]];
-        const auto t2 = head.TexCoords()[tex_indices[2]];
+        const Triangle triangle{vertices[0],vertices[1],vertices[2]};
 
-        //Scale them to the texture map
-        //Note we Need to flip the v axis
-        const auto tw{texture_map.Width()};
-        const auto th{texture_map.Height()}; 
-        const auto uv0 = Vec2f{t0.U()*tw, th-t0.V()*th};
-        const auto uv1 = Vec2f{t1.U()*tw, th-t1.V()*th};
-        const auto uv2 = Vec2f{t2.U()*tw, th-t2.V()*th};
-
-        //Do some basic per-triangle shading
-        //This results in whats called 'flat shading'
-        auto col = Color3f{0.f,0.f,0.f};
-        Norm3f norm{Cross<float,3>(Cartesian(world[1])-Cartesian(world[0]),Cartesian(world[2])-Cartesian(world[0]))};
-        const float dot = Dot(norm,-light_dir); //-light_dir is the vector from surface to light source
-        //Backface culling
-        //If the dot product is negative then it means the triangle is not facing the camera (same as light in this case)
-        if(dot>0.f) {
-            col = Color3f{dot,dot,dot};
-        }
-
-        //Store the attributes in a Vertex object
-        const ScreenVertex a{Vec2f(vertices[0].X(),vertices[0].Y()), uv0, vertices[0].Z()};
-        const ScreenVertex b{Vec2f(vertices[1].X(),vertices[1].Y()), uv1, vertices[1].Z()};
-        const ScreenVertex c{Vec2f(vertices[2].X(),vertices[2].Y()), uv2, vertices[2].Z()};
-
-        const Triangle triangle{a,b,c, col};
         RasteriseAndColor(triangle, image_buffer, depth_buffer, texture_map);
     }
-
-    
 
     //Create image from buffer and write to file
     PPMImage image{std::move(image_buffer)};

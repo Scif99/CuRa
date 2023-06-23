@@ -55,7 +55,7 @@ public:
     constexpr Prec U() const noexcept requires(Dim==2) {return elem[0];}
     constexpr Prec V() const noexcept requires(Dim==2) {return elem[1];}
 
-    constexpr Vec operator-()  noexcept {
+    constexpr Vec operator-() const noexcept {
         auto ret(*this);
         std::transform(this->cbegin(),this->cend(),
                    ret.begin(),
@@ -150,6 +150,7 @@ inline constexpr auto operator-(const Vec<Prec, Dim>& lhs, const Vec<Prec, Dim>&
     return ret;
 }
 
+//Element-wise multiplication of two vectors of the same dimension
 template<Decimal Prec, std::size_t Dim>
 inline constexpr auto operator*(const Vec<Prec, Dim> &lhs, const Vec<Prec, Dim> &rhs) 
 {

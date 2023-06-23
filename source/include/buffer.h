@@ -4,7 +4,8 @@
 #include <cassert>
 #include <vector>
 
-/// @brief A buffer represents a 
+/// @brief A buffer represents a contiguous block of data
+/// @brief Follows the 'top-left origin' convention
 /// @tparam T Type of the data stored
 template<typename T>
 class Buffer {
@@ -30,7 +31,6 @@ public:
     /// @param x x coordinate in pixel space
     /// @param y y coordinate in pixel space 
     void Set(int x, int y, const T& val) {
-        assert(y*width_ + x < data_.size());
         data_[y*width_+ x] = val;
     }
 

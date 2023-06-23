@@ -3,14 +3,15 @@
 #include <array>
 #include <iostream>
 #include "vec.h"
+#include <optional>
 
 
 class Mat4f{
 private:
     std::array<float, 16> data_;
 
-    static constexpr int Rows{4};
-    static constexpr int Cols{4};
+    static constexpr int rows{4};
+    static constexpr int cols{4};
 
 public:
 
@@ -34,20 +35,12 @@ public:
         return Id;
     }
     
-    void Transpose();
 
     //Iterators
     auto begin() { return data_.begin(); }
     auto end() { return data_.end(); }
 };
 
-inline void Mat4f::Transpose() {
-    for(int i=0;i<4;++i) {
-        for(int j = 0;j<4; ++j) {
-            this->operator()(i,j) = this->operator()(j,i);
-        }
-    }
-};
 
 
 [[nodiscard]] inline Mat4f operator*(const Mat4f& lhs, const Mat4f& rhs) {
@@ -63,13 +56,11 @@ inline void Mat4f::Transpose() {
     return ans;
 };
 
-[[nodiscard]] inline  Vec4f operator*(const Mat4f& lhs, const Vec4f& rhs) {
+[[nodiscard]] inline Vec4f operator*(const Mat4f& lhs, const Vec4f& rhs) {
     Vec4f ans;
     for(int i =0; i<4;++i) {
         for(int j = 0;j<4;++j) {
-        // {std::cout<<lhs(i,j)<<','<<rhs[j]<<','<<lhs(i,j)*rhs[j]<<'\n';}
             ans[i]+= lhs(i,j)*rhs[j];
-
         }
     }
     return ans;
@@ -101,5 +92,152 @@ inline void Mat4f::Transpose() {
     Mat4f tr = Mat4f(std::move(data));
     return tr*a;
 }
+
+[[nodiscard]] inline  Mat4f Transpose(const Mat4f& m) {
+    Mat4f tr;
+    for(int i=0;i<4;++i) {
+        for(int j = 0;j<4; ++j) {
+            tr(i,j) = m(j,i);
+        }
+    }
+    return tr;
+}
+
+//Yoinked from https://stackoverflow.com/questions/1148309/inverting-a-4x4-matrix
+[[nodiscard]] inline std::optional<Mat4f> Invert(const Mat4f& m)
+ {
+    Mat4f inv_m;
+        inv_m(0,0) = m(1,1) * m(2,2) * m(3,3) -
+                         m(1,1) * m(2,3) * m(3,2) -
+                         m(2,1) * m(1,2) * m(3,3) +
+                         m(2,1) * m(1,3) * m(3,2) +
+                         m(3,1) * m(1,2) * m(2,3) -
+                         m(3,1) * m(1,3) * m(2,2);
+
+        inv_m(1,0) = -m(1,0) * m(2,2) * m(3,3) +
+                         m(1,0) * m(2,3) * m(3,2) +
+                         m(2,0) * m(1,2) * m(3,3) -
+                         m(2,0) * m(1,3) * m(3,2) -
+                         m(3,0) * m(1,2) * m(2,3) +
+                         m(3,0) * m(1,3) * m(2,2);
+
+        inv_m(2,0) = m(1,0) * m(2,1) * m(3,3) -
+                         m(1,0) * m(2,3) * m(3,1) -
+                         m(2,0) * m(1,1) * m(3,3) +
+                         m(2,0) * m(1,3) * m(3,1) +
+                         m(3,0) * m(1,1) * m(2,3) -
+                         m(3,0) * m(1,3) * m(2,1);
+
+        inv_m(3,0) = -m(1,0) * m(2,1) * m(3,2) +
+                         m(1,0) * m(2,2) * m(3,1) +
+                         m(2,0) * m(1,1) * m(3,2) -
+                         m(2,0) * m(1,2) * m(3,1) -
+                         m(3,0) * m(1,1) * m(2,2) +
+                         m(3,0) * m(1,2) * m(2,1);
+
+        inv_m(0,1) = -m(0,1) * m(2,2) * m(3,3) +
+                         m(0,1) * m(2,3) * m(3,2) +
+                         m(2,1) * m(0,2) * m(3,3) -
+                         m(2,1) * m(0,3) * m(3,2) -
+                         m(3,1) * m(0,2) * m(2,3) +
+                         m(3,1) * m(0,3) * m(2,2);
+
+        inv_m(1,1) = m(0,0) * m(2,2) * m(3,3) -
+                         m(0,0) * m(2,3) * m(3,2) -
+                         m(2,0) * m(0,2) * m(3,3) +
+                         m(2,0) * m(0,3) * m(3,2) +
+                         m(3,0) * m(0,2) * m(2,3) -
+                         m(3,0) * m(0,3) * m(2,2);
+
+        inv_m(2,1) = -m(0,0) * m(2,1) * m(3,3) +
+                         m(0,0) * m(2,3) * m(3,1) +
+                         m(2,0) * m(0,1) * m(3,3) -
+                         m(2,0) * m(0,3) * m(3,1) -
+                         m(3,0) * m(0,1) * m(2,3) +
+                         m(3,0) * m(0,3) * m(2,1);
+
+        inv_m(3,1) = m(0,0) * m(2,1) * m(3,2) -
+                         m(0,0) * m(2,2) * m(3,1) -
+                         m(2,0) * m(0,1) * m(3,2) +
+                         m(2,0) * m(0,2) * m(3,1) +
+                         m(3,0) * m(0,1) * m(2,2) -
+                         m(3,0) * m(0,2) * m(2,1);
+
+        inv_m(0,2) = m(0,1) * m(1,2) * m(3,3) -
+                         m(0,1) * m(1,3) * m(3,2) -
+                         m(1,1) * m(0,2) * m(3,3) +
+                         m(1,1) * m(0,3) * m(3,2) +
+                         m(3,1) * m(0,2) * m(1,3) -
+                         m(3,1) * m(0,3) * m(1,2);
+
+        inv_m(1,2) = -m(0,0) * m(1,2) * m(3,3) +
+                         m(0,0) * m(1,3) * m(3,2) +
+                         m(1,0) * m(0,2) * m(3,3) -
+                         m(1,0) * m(0,3) * m(3,2) -
+                         m(3,0) * m(0,2) * m(1,3) +
+                         m(3,0) * m(0,3) * m(1,2);
+
+        inv_m(2,2) = m(0,0) * m(1,1) * m(3,3) -
+                         m(0,0) * m(1,3) * m(3,1) -
+                         m(1,0) * m(0,1) * m(3,3) +
+                         m(1,0) * m(0,3) * m(3,1) +
+                         m(3,0) * m(0,1) * m(1,3) -
+                         m(3,0) * m(0,3) * m(1,1);
+
+        inv_m(3,2) = -m(0,0) * m(1,1) * m(3,2) +
+                         m(0,0) * m(1,2) * m(3,1) +
+                         m(1,0) * m(0,1) * m(3,2) -
+                         m(1,0) * m(0,2) * m(3,1) -
+                         m(3,0) * m(0,1) * m(1,2) +
+                         m(3,0) * m(0,2) * m(1,1);
+
+        inv_m(0,3) = -m(0,1) * m(1,2) * m(2,3) +
+                         m(0,1) * m(1,3) * m(2,2) +
+                         m(1,1) * m(0,2) * m(2,3) -
+                         m(1,1) * m(0,3) * m(2,2) -
+                         m(2,1) * m(0,2) * m(1,3) +
+                         m(2,1) * m(0,3) * m(1,2);
+
+        inv_m(1,3) = m(0,0) * m(1,2) * m(2,3) -
+                         m(0,0) * m(1,3) * m(2,2) -
+                         m(1,0) * m(0,2) * m(2,3) +
+                         m(1,0) * m(0,3) * m(2,2) +
+                         m(2,0) * m(0,2) * m(1,3) -
+                         m(2,0) * m(0,3) * m(1,2);
+
+        inv_m(2,3) = -m(0,0) * m(1,1) * m(2,3) +
+                         m(0,0) * m(1,3) * m(2,1) +
+                         m(1,0) * m(0,1) * m(2,3) -
+                         m(1,0) * m(0,3) * m(2,1) -
+                         m(2,0) * m(0,1) * m(1,3) +
+                         m(2,0) * m(0,3) * m(1,1);
+
+        inv_m(3,3) = m(0,0) * m(1,1) * m(2,2) -
+                         m(0,0) * m(1,2) * m(2,1) -
+                         m(1,0) * m(0,1) * m(2,2) +
+                         m(1,0) * m(0,2) * m(2,1) +
+                         m(2,0) * m(0,1) * m(1,2) -
+                         m(2,0) * m(0,2) * m(1,1);
+
+        double det = m(0,0) * inv_m(0,0) +
+                     m(0,1) * inv_m(1,0) +
+                     m(0,2) * inv_m(2,0) +
+                     m(0,3) * inv_m(3,0);
+
+        if (det == 0)
+            return std::nullopt;
+
+        det = 1.0 / det;
+
+        for (int i = 0; i < 4; i++)
+        {
+            for (int j = 0; j < 4; j++)
+            {
+                inv_m(i,j) = inv_m(i,j) * det;
+            }
+        }
+
+        return inv_m;
+    }
 
 #endif

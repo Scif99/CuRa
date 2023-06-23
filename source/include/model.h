@@ -26,35 +26,37 @@ static std::vector<std::string> Split(std::string line, char delimiter=' ') {
 }
 
 //A face contains the indices to vertex attributes such as position, texture coordinates etc
-// e.g. pos_dix[0] is the index to the vertex position of the first vertex
+// e.g. pos_idx[0] is the index to the vertex position of the first vertex
 struct Face {
     std::vector<int> pos_idx;
     std::vector<int> tex_idx;
+    std::vector<int> norm_idx;
+
 };
 
 class Model {
 private:
     std::vector<Vec3f> vertices_;
     std::vector<Vec2f> tex_coords_;
+    std::vector<Vec3f> normals_;
     std::vector<Face> faces_;
 
     void Parse(std::string_view filename);
     Vec3f ParseOBJVertexPos(std::string_view line); //Parses a geometric vertex line from an obj file
     Vec2f ParseOBJTexCoords(std::string_view line); 
+    Vec3f ParseOBJVertexNorm(std::string_view line);
     Face ParseOBJFaceIndices(std::string_view line);
     
 
 
 public:
-
-
     Model(std::string_view path) {
         Parse(path);
     }
-
-
     const std::vector<Vec3f>& Vertices() const noexcept{return vertices_;};
-    const std::vector<Vec2f>& TexCoords() const noexcept{return tex_coords_;}    
+    const std::vector<Vec2f>& TexCoords() const noexcept{return tex_coords_;}   
+    const std::vector<Vec3f>& Normals() const noexcept{return normals_;};
+
     const std::vector<Face>& Faces() const noexcept{return faces_;}; //TODO switch to array?
 
 
@@ -76,6 +78,12 @@ Vec2f Model::ParseOBJTexCoords(std::string_view line) {
     return Vec2f{std::stof(words[1]),std::stof(words[2])}; 
 }
 
+//Example: vn  0.001 0.482 -0.876
+Vec3f Model::ParseOBJVertexNorm(std::string_view line) {
+    const auto words = Split(line.data(), ' ');
+    return Vec3f{std::stof(words[1]),std::stof(words[2]), std::stof(words[3])}; 
+}
+
 
 //Example of input 'f 6/4/1 3/5/3 7/6/5'
 //Example of output {6,3,7},{3,5,3}  ({position}, {tex_coord})
@@ -95,6 +103,8 @@ Face Model::ParseOBJFaceIndices(std::string_view line) {
         //Remember to subtract 1 from the index to get 0-indexing
         face.pos_idx.push_back(std::stoi(attribs[0]) - 1); //Position
         face.tex_idx.push_back(std::stoi(attribs[1]) - 1); //Texture coord
+        face.norm_idx.push_back(std::stoi(attribs[2]) - 1); //Normal
+
     }
 
     return face; 
@@ -119,6 +129,10 @@ void Model::Parse(std::string_view filename) {
         }
         if(curr_line.compare(0,3,"vt ")==0){
             tex_coords_.push_back(ParseOBJTexCoords(curr_line));
+        }
+
+        if(curr_line.compare(0,3,"vn ")==0){
+            normals_.push_back(ParseOBJVertexNorm(curr_line));
         }
         if(curr_line.compare(0,2,"f ")==0) {
             faces_.push_back(ParseOBJFaceIndices(curr_line));
