@@ -1,8 +1,12 @@
 #ifndef VERTEX_H
 #define VERTEX_H
 
-class VertexAttribute {
+#include  "vec.h"
 
+struct Vertex {
+
+    Vec3f Position;
+    Vec3f Normal;
+    Vec2f TexCoord; 
 };
-
-#endif
+#endif  

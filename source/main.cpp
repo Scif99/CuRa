@@ -17,6 +17,7 @@
 #include "mat.h"
 #include "pipeline.h"
 #include "light.h"
+#include "shader.h"
 
 //Contains all the per-vertex attributes
 struct ScreenVertex {
@@ -118,6 +119,8 @@ int main() {
     Mat4f view_matrix = LookAt(camera.eye, camera.center, camera.up);
     Mat4f proj_matrix = Projection(-0.5f,-2.5f,-1.f,1.f,-1.f,1.f);
 
+    GouradShader g_shader;
+
     //Iterate over each face (triangle) in the model
     for(const auto& [vert_indices, tex_indices, norm_indices] : head.Faces()) {
 
@@ -129,6 +132,7 @@ int main() {
         std::array<ScreenVertex,3> vertices;
         bool discard = false;
         for(int i =0; i<3; ++i) {
+
             //VERTEX POSITIONS
             //TRANSFORM TO CLIP SPACE VIA MVP
             auto v_clip = proj_matrix*view_matrix*world[i]; 
@@ -174,6 +178,7 @@ int main() {
                 break;
             }
         }
+        
         if(discard) continue; 
 
         const Triangle triangle{vertices[0],vertices[1],vertices[2]};
