@@ -1,5 +1,6 @@
 add_executable(${PROJECT} 
    main.cpp
+   gourad_shader.cpp
    )
 
 target_include_directories(${PROJECT}

@@ -2,81 +2,62 @@
 #define SHADER_H
 
 #include <string>
+#include <tuple>
 #include <unordered_map>
 #include <variant>
 #include <string_view>
 
+#include "buffer.h"
 #include "vec.h"
 #include "mat.h"
 #include "vertex.h"
 
-
+struct FragmentData {
+    Vec3f pos;
+    Color3f FragColor;
+};
 
 class Shader {
 public:
+    /// @brief Runs for each vertex. Must return at minimum the vertex position in clip coordinates.
+    /// @param v_attributes 
+    /// @return 
+    virtual ProcessedVertex PerVertex(const VertexAttributes& v_attributes) = 0; 
+    virtual FragmentData PerFragment(const Fragment& frag) = 0;
 
-    /// @brief Input: Vertex attributes in local space
-    /// @brief Output: Vertex positions in clip space
-    virtual void PerVertex(const Vertex& vertex) = 0; 
-    virtual void PerFragment() = 0;
-};
 
-
-class GouradShader : public Shader {
-public:
-    using UniformType = std::variant<float, Vec2f, Vec3f, Norm3f, Mat4f>;
-
-    void PerVertex(const Vertex& v) override {
-    //IN params
-    const auto& [aPos, aNormal, aTexCoord] = v; //unpack the vertex
-
-    //OUT params (sent to fragment shader)
-    Vec4f gl_position;
-    Color3f vertex_diffuse;
-
-    //UNIFORMS
-    auto model = GetUniform<Mat4f>("model");
-    auto view = GetUniform<Mat4f>("view");
-    auto projection =  GetUniform<Mat4f>("projection");
-    auto light_color = GetUniform<Color3f>("light_color");
-    auto light_dir = GetUniform<Vec3f>("light_dir");
-
-    const auto world_pos = model*Vec4f(aPos,1.f); //vertex position in world space
-    gl_position =  projection*view*world_pos; //vertex position in clip space
-
-    //Compute diffuse color at the vertex
-
-    const auto normal_transform = Invert(Transpose(model)).value();
-    const auto world_norm = normal_transform*Vec4f(aNormal,0.f); //NOTE we set the w coordinate to 0 to ignore any translational components
-    const float dot = Dot(UnitVector(Cartesian(world_norm)) , -UnitVector(light_dir));
-    vertex_diffuse = dot*light_color;
-
-        
-    };   
-
-    void PerFragment() override {};
-
-    
     //TODO add constraints
     //Uniform should be a type contained inside variant
     template<typename Uniform>
-    void SetUniform(const std::string& name, Uniform f) {
-        uniforms[name] = f;
-    }   
+    void SetUniform(const std::string& name, Uniform f) { uniforms[name] = f; }   
 
     //TODO Handle errors
     template<typename Uniform>
     Uniform GetUniform(const std::string& name) {
-
         return std::get<Uniform>(std::visit([](auto&& arg) -> UniformType {return arg;}, uniforms[name]));
     }  
 
-public:
-    Vec4f gl_position;
-    Color3f vertex_diffuse;
+    //Store a ptr to a texture map
+    void SetTexture(const std::string& name, const Buffer<Color3f>* p_tex) {textures[name] = p_tex;}
+
+    //Retrieve a ptr to a texture map
+
+    //TODO handle errors
+    const Buffer<Color3f>* Texture(const std::string& name) {return textures[name]; }
 
 private:
-    std::unordered_map<std::string, UniformType> uniforms;
+    using UniformType = std::variant<float, Vec2f, Vec3f, Norm3f, Mat4f>;
+
+    std::unordered_map<std::string, UniformType> uniforms; //Models uniforms in opengl
+    std::unordered_map<std::string, const Buffer<Color3f>*> textures; //Models sampler2D in opengl
 };
+
+
+
+
+//FLAT SHADING
+//Norm3f triangle_norm{Cross<float,3>(Cartesian(world[1])-Cartesian(world[0]),Cartesian(world[2])-Cartesian(world[0]))};
+//const float dot = Dot(triangle_norm ,-light.Direction); 
+//vertices[i].diffuse = dot*light.Color;
 
 #endif

@@ -37,7 +37,7 @@ public:
     void Set(int x, int y, const DataType& val) {
         data_[y*width_+ x] = val;
     }
-
+    
     DataType Get(int x, int y) const {
         return data_[y*width_+ x];
     }
