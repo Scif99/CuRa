@@ -1,13 +1,13 @@
 #ifndef VECTOR_H
 #define VECTOR_H
 
-#include <concepts>
-#include <numeric>
-#include <cmath>
 #include <algorithm>
 #include <array>
 #include <cassert>
+#include <cmath>
+#include <concepts>
 #include <iostream>
+#include <numeric>
 #include <optional>
 #include <random>
 

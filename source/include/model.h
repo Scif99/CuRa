@@ -2,19 +2,20 @@
 #define MODEL_H
 
 #include <array>
+#include <fstream>
+#include <ranges>
 #include <sstream>
 #include <string>
 #include <string_view>
-#include <fstream>
-#include <ranges>
 #include <vector>
+
 #include "vec.h"
 
 /// @brief Splits a line into words by a specified delimiter
 /// @param line String to be split
 /// @param delimiter The words will be split using this. By default splits using whitespace
 /// @return A vector containing the words
-static std::vector<std::string> Split(std::string line, char delimiter=' ') {
+[[nodiscard]] static std::vector<std::string> Split(std::string line, char delimiter=' ') {
     std::vector<std::string> words;
     std::istringstream iss(line.data());
     for(std::string token; std::getline(iss,token, delimiter);) {
@@ -42,10 +43,10 @@ private:
     std::vector<Face> faces_;
 
     void Parse(std::string_view filename);
-    Vec3f ParseOBJVertexPos(std::string_view line); //Parses a geometric vertex line from an obj file
-    Vec2f ParseOBJTexCoords(std::string_view line); 
-    Vec3f ParseOBJVertexNorm(std::string_view line);
-    Face ParseOBJFaceIndices(std::string_view line);
+    [[nodiscard]] Vec3f ParseOBJVertexPos(std::string_view line); //Parses a geometric vertex line from an obj file
+    [[nodiscard]] Vec2f ParseOBJTexCoords(std::string_view line); 
+    [[nodiscard]] Vec3f ParseOBJVertexNorm(std::string_view line);
+    [[nodiscard]] Face ParseOBJFaceIndices(std::string_view line);
     
 
 

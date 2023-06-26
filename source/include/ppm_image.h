@@ -3,13 +3,12 @@
 
 #include <iostream>
 #include <fstream>
-
+#include <string>
+#include <string_view>
 
 #include "buffer.h"
 #include "vec.h"
 
-#include <string_view>
-#include <string>
 
 
 class PPMImage {
@@ -25,10 +24,10 @@ public:
     PPMImage(Buffer<Color3f>&& buffer)
     :  buffer_{std::move(buffer)} {}
 
-    int Height() const noexcept{return buffer_.Height();}
-    int Width() const noexcept {return buffer_.Width();}
+    [[nodiscard]] int Height() const noexcept{return buffer_.Height();}
+    [[nodiscard]] int Width() const noexcept {return buffer_.Width();}
 
-    Color3f Get(int x, int y) const {
+    [[nodiscard]] Color3f Get(int x, int y) const {
         return buffer_.Get(x, y);
     }
 

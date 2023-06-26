@@ -27,4 +27,11 @@ struct Fragment {
     Vec2f tex_coords;
 };
 
+// Contains the data needed to write to an image buffer
+//Is returnged from the fragment shader
+struct FragmentData {
+    Vec3f pos; //Contains window coordinates as well as the fragment depth
+    Color3f FragColor; //rgb color
+};
+
 #endif  

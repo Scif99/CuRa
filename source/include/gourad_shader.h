@@ -8,7 +8,7 @@
 class GouradShader : public Shader{
 public:
 
-    ProcessedVertex PerVertex(const VertexAttributes& v_attributes) override;
+    [[nodiscard]] ProcessedVertex PerVertex(const VertexAttributes& v_attributes) override;
 
     /*Processes a rasterised fragment.
     The input should contain AT LEAST:
@@ -17,7 +17,7 @@ public:
 
     The output is a 3d vector (2d pixel coords, depth) and a color
     */
-    FragmentData PerFragment(const Fragment& frag) override;
+    [[nodiscard]] FragmentData PerFragment(const Fragment& frag) override;
 
 
 };

@@ -4,6 +4,7 @@
 #include <cassert>
 #include <concepts>
 #include <vector>
+
 #include "vec.h"
 
 /// @brief A buffer represents a contiguous block of data
@@ -38,7 +39,7 @@ public:
         data_[y*width_+ x] = val;
     }
     
-    DataType Get(int x, int y) const {
+    [[nodiscard]] DataType Get(int x, int y) const {
         return data_[y*width_+ x];
     }
 

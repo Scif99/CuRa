@@ -1,9 +1,11 @@
 #ifndef MAT_H
 #define MAT_H
+
 #include <array>
 #include <iostream>
-#include "vec.h"
 #include <optional>
+
+#include "vec.h"
 
 
 class Mat4f{

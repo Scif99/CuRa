@@ -17,7 +17,7 @@
 /// @param center Direction in which the camera is facing
 /// @param up Defines the orientation of the camera
 /// @return View matrix
-Mat4f LookAt(const Vec3f& eye, const Vec3f& center, const Vec3f& up) {
+[[nodiscard]] Mat4f LookAt(const Vec3f& eye, const Vec3f& center, const Vec3f& up) {
     //Construct an orthonormal basis
     const auto w = Norm3f{eye - center}; //'forward' axis. By convention, the camera should be facing in the -z direction
     const auto u = Norm3f{Cross<float,3>(up,w)}; //'right' axis
@@ -60,7 +60,7 @@ Mat4f LookAt(const Vec3f& eye, const Vec3f& center, const Vec3f& up) {
 /// @param im_width 
 /// @param flip_y 
 /// @return 3D vectors containing the coordinates of the projected point, along with the depth 
-Mat4f Projection(float n, float f, float l, float r, float b, float t) { 
+[[nodiscard]] Mat4f Projection(float n, float f, float l, float r, float b, float t) { 
 
     assert(l<r && b<t && n > f);
     const std::array<float, 16> data = {
@@ -75,12 +75,12 @@ Mat4f Projection(float n, float f, float l, float r, float b, float t) {
 
 
 /// @brief Applies the viewport transform 
-/// @param ndc_coords 
+/// @param ndc_coords Coordinates inside the unit cube [-1,1]
 /// @param im_height 
 /// @param im_width 
 /// @param flip_y 
 /// @return 
-Vec3f ViewPort(const Vec3f& ndc_coords, int im_height, int im_width, bool flip_y) {
+[[nodiscard]] Vec3f ViewPort(const Vec3f& ndc_coords, int im_height, int im_width, bool flip_y) {
 
     const auto y_scale{flip_y ? -1.f : 1.f};
     const auto x_pixel = (ndc_coords.X()+1)*im_width/2.f;

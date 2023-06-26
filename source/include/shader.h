@@ -11,10 +11,6 @@
 #include "mat.h"
 #include "vertex.h"
 
-struct FragmentData {
-    Vec3f pos;
-    Color3f FragColor;
-};
 
 class Shader {
 public:
@@ -32,7 +28,7 @@ public:
 
     //TODO Handle errors
     template<typename Uniform>
-    Uniform GetUniform(const std::string& name) {
+    [[nodiscard]] Uniform GetUniform(const std::string& name) {
         assert(uniforms.contains(name)&& "Uniform not found");
         return std::get<Uniform>(std::visit([](auto&& arg) -> UniformType {return arg;}, uniforms[name]));
     }  
@@ -43,7 +39,10 @@ public:
     //Retrieve a ptr to a texture map
 
     //TODO handle errors
-    const Buffer<Color3f>* Texture(const std::string& name) {return textures[name]; }
+    [[nodiscard]] const Buffer<Color3f>* Texture(const std::string& name) {
+        assert(textures.contains(name)&& "Texture not found");
+        return textures[name]; 
+    }
 
 private:
     using UniformType = std::variant<float, Vec2f, Vec3f, Norm3f, Mat4f>; //Contains all the possible types of a uniform variable
