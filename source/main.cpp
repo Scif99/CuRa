@@ -75,10 +75,10 @@ std::vector<Fragment> Rasterise(const Triangle& triangle, const Buffer<Color3f>&
 
                 Fragment frag;
                 //Interpolate all per-vertex attributes
-                frag.tex_coords = l0*v0.tex_coords + l1*v1.tex_coords + l2*v2.tex_coords;
-                frag.diffuse = l0*v0.diffuse + l1*v1.diffuse + l2*v2.diffuse;         
                 const float frag_depth = l0*v0.clip_coords.Z() + l1*v1.clip_coords.Z() + l2*v2.clip_coords.Z();
                 frag.window_coords = Vec3f(x,y,frag_depth);
+                frag.tex_coords = l0*v0.tex_coords + l1*v1.tex_coords + l2*v2.tex_coords;
+                frag.normal = l0*v0.world_norm + l1*v1.world_norm + l2*v2.world_norm;         
 
                 triangle_frags.push_back(frag);
             }
@@ -98,21 +98,26 @@ int main() {
     //Load model
     const Model head("assets/models/head.obj");
     //Load texture for model
-    const Buffer<Color3f> texture_map = ParsePPMTexture("assets/textures/head_diffuse.ppm");
+    const Buffer<Color3f> diffuse_map = ParsePPMTexture("assets/textures/head_diffuse.ppm");
+    const Buffer<Color3f> specular_map = ParsePPMTexture("assets/textures/head_spec.ppm");
+
 
     //Initialise scene entities
-    const Camera camera(Vec3f{0.f,0.f,0.f},
-                        Vec3f{0.f,0.f,-1.f},
-                        Vec3f{0.f,1.f,0.f});
+    const Camera camera(Vec3f{1.f,1.f,3.f}, //eye
+                        Vec3f{0.f,0.f,0.f}, //center
+                        Vec3f{0.f,1.f,0.f}); //up
     
     //Directional (distant) light
     const Norm3f light_dir{Vec3f{0.f,0.f,-1.f}};
-    const DistantLight light = {light_dir, Color3f{1.f,1.f,1.f}};
+    const DistantLight light = {light_dir, 
+                                Color3f{0.2f,0.2f,0.2f}, //diffuse
+                                Color3f{0.5f,0.5f,0.5f}, //diffuse
+                                Color3f{1.f,1.f,1.f} }; //specular
 
     auto model_matrix = Mat4f::Identity(); //Note it is defined outside the loop, as it applies to ALL vertices in the model
-    model_matrix = Translate(model_matrix, Vec3f{0.f,0.f,-1.2f});
+    //model_matrix = Translate(model_matrix, Vec3f{0.f,0.f,-1.2f});
     Mat4f view_matrix = LookAt(camera.eye, camera.center, camera.up);
-    Mat4f proj_matrix = Projection(-0.5f,-2.5f,-1.f,1.f,-1.f,1.f);
+    Mat4f proj_matrix = Projection(-2.f,-4.f,-1.f,1.f,-1.f,1.f);
 
     //Create Shader
     GouradShader g_shader;
@@ -120,11 +125,18 @@ int main() {
     g_shader.SetUniform("model", model_matrix);
     g_shader.SetUniform("view", view_matrix);
     g_shader.SetUniform("projection", proj_matrix);
-    g_shader.SetUniform("light_color", light.Color);
+    
     g_shader.SetUniform("light_dir", light.Direction);
+    g_shader.SetUniform("light_ambient", light.Ambient);
+    g_shader.SetUniform("light_diffuse", light.Diffuse);
+    g_shader.SetUniform("light_specular", light.Specular);
+    g_shader.SetUniform("view_pos", camera.eye);
+
 
     //Set textures
-    g_shader.SetTexture("diffuse", &texture_map);
+    g_shader.SetTexture("diffuse", &diffuse_map);
+    g_shader.SetTexture("specular", &specular_map);
+
 
     //Iterate over each face (triangle) in the model
     for(const auto& [vert_indices, tex_indices, norm_indices] : head.Faces()) {
@@ -137,7 +149,7 @@ int main() {
 
             //Extract vertex attributes from the model using face indices
             const auto v = head.Vertices()[vert_indices[i]]; 
-            const auto n = head.Normals()[norm_indices[i]];
+            const auto n = UnitVector(head.Normals()[norm_indices[i]]);
             const auto tex_coords = head.TexCoords()[tex_indices[i]];
 
             VertexAttributes vert  = {v,n,tex_coords};
@@ -165,8 +177,8 @@ int main() {
                 vertex.clip_coords = Vec4f(v_screen,1.f);
 
                 //Also need to scale texture coordinates to the texture's dimensions
-                const auto tw{texture_map.Width()};
-                const auto th{texture_map.Height()}; 
+                const auto tw{diffuse_map.Width()};
+                const auto th{diffuse_map.Height()}; 
                 vertex.tex_coords = Vec2f(vertex.tex_coords.U()*tw, th - vertex.tex_coords.V()*th);
         });
 
@@ -179,12 +191,12 @@ int main() {
 
 
         //Rasterise the triangle into fragments
-        const std::vector<Fragment> frags = Rasterise(triangle, image_buffer);
+        const std::vector<Fragment> vec_frags = Rasterise(triangle, image_buffer);
         
         //FRAGMENT PROCESSING
-        for(const auto& f : frags) {
+        for(const auto& fragment : vec_frags) {
             //Run fragment shader
-            const auto& [pos,col] = g_shader.PerFragment(f); 
+            const auto& [pos,col] = g_shader.PerFragment(fragment); 
 
             //Depth Test
             //Remember that smaller z means further away (camera faces -z)

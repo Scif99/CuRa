@@ -1,11 +1,10 @@
 #ifndef SHADER_H
 #define SHADER_H
 
+#include <cassert>
 #include <string>
-#include <tuple>
 #include <unordered_map>
 #include <variant>
-#include <string_view>
 
 #include "buffer.h"
 #include "vec.h"
@@ -27,13 +26,14 @@ public:
 
 
     //TODO add constraints
-    //Uniform should be a type contained inside variant
+    //Uniform should be one of types inside the variant
     template<typename Uniform>
-    void SetUniform(const std::string& name, Uniform f) { uniforms[name] = f; }   
+    void SetUniform(const std::string& name, Uniform f) { if(!uniforms.contains("name")) uniforms[name] = f; }   
 
     //TODO Handle errors
     template<typename Uniform>
     Uniform GetUniform(const std::string& name) {
+        assert(uniforms.contains(name)&& "Uniform not found");
         return std::get<Uniform>(std::visit([](auto&& arg) -> UniformType {return arg;}, uniforms[name]));
     }  
 
@@ -46,7 +46,7 @@ public:
     const Buffer<Color3f>* Texture(const std::string& name) {return textures[name]; }
 
 private:
-    using UniformType = std::variant<float, Vec2f, Vec3f, Norm3f, Mat4f>;
+    using UniformType = std::variant<float, Vec2f, Vec3f, Norm3f, Mat4f>; //Contains all the possible types of a uniform variable
 
     std::unordered_map<std::string, UniformType> uniforms; //Models uniforms in opengl
     std::unordered_map<std::string, const Buffer<Color3f>*> textures; //Models sampler2D in opengl
