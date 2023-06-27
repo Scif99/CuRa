@@ -38,6 +38,8 @@ int main() {
     //Load texture for model
     const Buffer<Color3f> diffuse_map = ParsePPMTexture("assets/textures/head_diffuse.ppm");
     const Buffer<Color3f> specular_map = ParsePPMTexture("assets/textures/head_spec.ppm");
+    const Buffer<Vec3f> normal_map = ParsePPMTexture("assets/textures/african_head_nm.ppm");
+
 
 
     //Initialise scene entities
@@ -52,7 +54,8 @@ int main() {
                                 Color3f{0.5f,0.5f,0.5f}, //diffuse
                                 Color3f{1.f,1.f,1.f} }; //specular
 
-    auto model_matrix = Mat4f::Identity(); //Note it is defined outside the loop, as it applies to ALL vertices in the model
+    //Note the transformations are defined outside the loop, as they apply to ALL vertices in the model
+    auto model_matrix = Mat4f::Identity(); 
     //model_matrix = Translate(model_matrix, Vec3f{0.f,0.f,-1.2f});
     Mat4f view_matrix = LookAt(camera.eye, camera.center, camera.up);
     Mat4f proj_matrix = Projection(-2.f,-4.f,-1.f,1.f,-1.f,1.f);
@@ -70,12 +73,11 @@ int main() {
     g_shader.SetUniform("light_specular", light.Specular);
     g_shader.SetUniform("view_pos", camera.eye);
 
-
     //Set textures
     g_shader.SetTexture("diffuse", &diffuse_map);
     g_shader.SetTexture("specular", &specular_map);
-
-
+    g_shader.SetTexture("normal", &normal_map);
+    
     //Iterate over each face (triangle) in the model
     for(const auto& [vert_indices, tex_indices, norm_indices] : head.Faces()) {
 
@@ -113,11 +115,6 @@ int main() {
                 const auto v_ndc = Cartesian(vertex.clip_coords*p_divide);//Apply perspective divide
                 const auto v_screen = ViewPort(v_ndc,image_buffer.Height(),image_buffer.Width(), true); //Apply viewport transform
                 vertex.clip_coords = Vec4f(v_screen,1.f);
-
-                //Also need to scale texture coordinates to the texture's dimensions
-                const auto tw{diffuse_map.Width()};
-                const auto th{diffuse_map.Height()}; 
-                vertex.tex_coords = Vec2f(vertex.tex_coords.U()*tw, th - vertex.tex_coords.V()*th);
         });
 
 

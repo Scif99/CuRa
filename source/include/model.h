@@ -177,6 +177,7 @@ Buffer<Color3f> ParsePPMTexture(std::string_view filename) {
     Buffer<Color3f> buffer(height,width);
 
     //Now we read in three values at a time, r,g,b.
+    //Scale the values to the range [0,1]
     std::string r,g,b;
     int idx = 0;
     while(file>>r>>g>>b) {

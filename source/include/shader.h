@@ -12,6 +12,20 @@
 #include "vertex.h"
 
 
+inline Color3f TextureLookup( const Buffer<Color3f>* texture, float u, float v, bool flip_v = true) {
+    assert(u>=0 && u<=1.f);
+    assert(v>=0 && v<=1.f);
+
+    //Also need to scale texture coordinates to the texture's dimensions
+    const auto tw{texture->Width()};
+    const auto th{texture->Height()}; 
+
+    const float scaled_u = u*tw;
+    const float scaled_v = flip_v ? th - v*th : v*th;
+    return texture->Get(scaled_u,scaled_v);
+}
+
+
 class Shader {
 public:
     /// @brief Runs for each vertex. Must return at minimum the vertex position in clip coordinates.

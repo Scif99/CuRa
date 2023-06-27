@@ -43,25 +43,31 @@ FragmentData GouradShader::PerFragment(const Fragment& frag) {
     const auto light_specular = GetUniform<Color3f>("light_specular");
     const auto frag_pos  = GetUniform<Vec3f>("frag_pos");
     const auto view_pos = GetUniform<Vec3f>("view_pos");
-
+    const auto model = GetUniform<Mat4f>("model"); //Need the model matrix again to transform the normal
     //OUTPUT
     FragmentData frag_data;
     frag_data.pos = w_coords;
 
-    const auto u_norm = UnitVector(norm);
+    //const auto u_norm = UnitVector(norm);
 
     //ambient 
-    Color3f ambient_component = light_ambient * Texture("diffuse")->Get(frag.tex_coords.U(),frag.tex_coords.V());
-    
+    Color3f ambient_component = light_ambient * TextureLookup(Texture("diffuse"), frag.tex_coords.U(),frag.tex_coords.V());
+
+    //Normal
+    Vec3f frag_norm = TextureLookup(Texture("normal"),frag.tex_coords.U(),frag.tex_coords.V());
+    frag_norm = 2.f*(frag_norm - Vec3f(0.5f,0.5f,0.5f)); //Note the texture values are stored in the range[0,1] so we adjust to the range [-1,1]
+    const auto normal_transform =  Invert(Transpose(model)).value(); //TODO can this be indeterminate?
+    frag_norm = Cartesian(normal_transform*Vec4f(frag_norm,0.f));  //w is zero as normal should be unaffected by translations
+
     // diffuse 
-    float diff = std::max(Dot(u_norm, -light_dir),0.f);
-    Color3f diffuse_component = light_diffuse * diff * Texture("diffuse")->Get(frag.tex_coords.U(),frag.tex_coords.V());
+    float diff = std::max(Dot(frag_norm, -light_dir),0.f);
+    Color3f diffuse_component = light_diffuse * diff * TextureLookup(Texture("diffuse"), frag.tex_coords.U(),frag.tex_coords.V());
 
     // specular
     Vec3f viewDir = UnitVector(view_pos - frag_pos);
-    Vec3f reflectDir = UnitVector(light_dir - 2*Dot(u_norm,light_dir)*u_norm);
+    Vec3f reflectDir = UnitVector(light_dir - 2*Dot(frag_norm,light_dir)*frag_norm);
     float spec = std::pow(std::max(Dot(viewDir, reflectDir), 0.f), 64);
-    Color3f specular_component = light_specular * spec * Texture("specular")->Get(frag.tex_coords.U(),frag.tex_coords.V());  
+    Color3f specular_component = light_specular * spec * TextureLookup(Texture("specular"), frag.tex_coords.U(),frag.tex_coords.V());  
 
     frag_data.FragColor = ambient_component+ diffuse_component + specular_component;
 

@@ -7,12 +7,11 @@
 
 #include "vec.h"
 
-/// @brief A buffer represents a contiguous block of data
+/// @brief A buffer models a 2D block of data.
 /// @brief Follows the 'top-left origin' convention
 /// @tparam T Type of the data stored
-
 template<typename DataType>
-requires (std::same_as<DataType,float> || std::same_as<DataType,Vec3f> || std::same_as<DataType,Vec3d>)
+requires (std::same_as<DataType,float> || std::same_as<DataType,Vec3f> || std::same_as<DataType,Norm3f>)
 class Buffer {
 private:
     std::vector<DataType> data_;
