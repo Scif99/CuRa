@@ -2,6 +2,7 @@
 #define SHADER_H
 
 #include <cassert>
+#include <mutex>
 #include <string>
 #include <unordered_map>
 #include <variant>
@@ -31,38 +32,45 @@ public:
     /// @brief Runs for each vertex. Must return at minimum the vertex position in clip coordinates.
     /// @param v_attributes 
     /// @return 
-    virtual ProcessedVertex PerVertex(const VertexAttributes& v_attributes) = 0; 
-    virtual FragmentData PerFragment(const Fragment& frag) = 0;
+    virtual ShadedVertex PerVertex(const Vertex& vertex) = 0; 
+    virtual ShadedFragment PerFragment(const Fragment& frag) = 0;
 
 
     //TODO add constraints
     //Uniform should be one of types inside the variant
     template<typename Uniform>
-    void SetUniform(const std::string& name, Uniform f) { if(!uniforms.contains("name")) uniforms[name] = f; }   
+    void SetUniform(const std::string& name, Uniform f) { 
+        //const std::lock_guard<std::mutex> lock(mtx);
+            uniforms_[name] = f; 
+    }   
 
     //TODO Handle errors
-    template<typename Uniform>
-    [[nodiscard]] Uniform GetUniform(const std::string& name) {
-        assert(uniforms.contains(name)&& "Uniform not found");
-        return std::get<Uniform>(std::visit([](auto&& arg) -> UniformType {return arg;}, uniforms[name]));
+    template<typename UniformType>
+    [[nodiscard]] UniformType GetUniform(const std::string& name) {
+        //const std::lock_guard<std::mutex> lock(mtx);
+        assert(uniforms_.contains(name)&& "Uniform not found");
+        return std::get<UniformType>(std::visit([](auto&& arg) -> Uniform {return arg;}, uniforms_[name]));
     }  
 
     //Store a ptr to a texture map
-    void SetTexture(const std::string& name, const Buffer<Color3f>* p_tex) {textures[name] = p_tex;}
+    void SetTexture(const std::string& name, const Buffer<Color3f>* p_tex) {
+        //const std::lock_guard<std::mutex> lock(mtx);
+        textures_[name] = p_tex;
+    }
 
     //Retrieve a ptr to a texture map
-
     //TODO handle errors
     [[nodiscard]] const Buffer<Color3f>* Texture(const std::string& name) {
-        assert(textures.contains(name)&& "Texture not found");
-        return textures[name]; 
+        //const std::lock_guard<std::mutex> lock(mtx);
+        assert(textures_.contains(name)&& "Texture not found");
+        return textures_[name]; 
     }
 
 private:
-    using UniformType = std::variant<float, Vec2f, Vec3f, Norm3f, Mat4f>; //Contains all the possible types of a uniform variable
-
-    std::unordered_map<std::string, UniformType> uniforms; //Models uniforms in opengl
-    std::unordered_map<std::string, const Buffer<Color3f>*> textures; //Models sampler2D in opengl
+    using Uniform = std::variant<float, Vec2f, Vec3f, Norm3f, Mat4f>; //Contains all the possible types of a uniform variable
+    std::unordered_map<std::string, Uniform> uniforms_; //Models uniforms in opengl
+    std::unordered_map<std::string, const Buffer<Color3f>*> textures_; //Models sampler2D in opengl
+    //std::mutex mtx;
 };
 
 

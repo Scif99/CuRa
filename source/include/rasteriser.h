@@ -1,7 +1,6 @@
 #ifndef RASTERISER_H
 #define RASTERISER_H
 
-
 #include <array>
 #include <optional>
 

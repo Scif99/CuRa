@@ -1,8 +1,8 @@
 #include "gourad_shader.h"
 
-ProcessedVertex GouradShader::PerVertex(const VertexAttributes& v_attributes) {
+ShadedVertex GouradShader::PerVertex(const Vertex& vertex) {
     //IN params
-    auto& [aPos, aNormal, aTexCoord] = v_attributes; //unpack the vertex
+    auto& [aPos, aNormal, aTexCoord] = vertex; //unpack the vertex
 
     //UNIFORMS
     const auto model = GetUniform<Mat4f>("model");
@@ -22,7 +22,7 @@ ProcessedVertex GouradShader::PerVertex(const VertexAttributes& v_attributes) {
     const auto normal_transform =  Invert(Transpose(model)).value(); //TODO can this be indeterminate?
     const auto world_norm = Cartesian(normal_transform*Vec4f(aNormal,0.f));  //w is zero as normal should be unaffected by translations
 
-    ProcessedVertex out = {
+    ShadedVertex out = {
         gl_position,
         UnitVector(world_norm),
         aTexCoord
@@ -31,7 +31,7 @@ ProcessedVertex GouradShader::PerVertex(const VertexAttributes& v_attributes) {
 };  
 
 
-FragmentData GouradShader::PerFragment(const Fragment& frag) {
+ShadedFragment GouradShader::PerFragment(const Fragment& frag) {
 
     //INPUT
     const auto& [w_coords, norm, tex_coords] = frag;
@@ -45,7 +45,7 @@ FragmentData GouradShader::PerFragment(const Fragment& frag) {
     const auto view_pos = GetUniform<Vec3f>("view_pos");
     const auto model = GetUniform<Mat4f>("model"); //Need the model matrix again to transform the normal
     //OUTPUT
-    FragmentData frag_data;
+    ShadedFragment frag_data;
     frag_data.pos = w_coords;
 
     //const auto u_norm = UnitVector(norm);

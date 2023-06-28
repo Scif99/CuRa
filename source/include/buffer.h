@@ -3,6 +3,8 @@
 
 #include <cassert>
 #include <concepts>
+#include <fstream>
+#include <mutex>
 #include <vector>
 
 #include "vec.h"
@@ -17,6 +19,7 @@ private:
     std::vector<DataType> data_;
     int height_;
     int width_;
+    //std::mutex mtx;
 
 public:
     //Construct with empty values
@@ -29,21 +32,35 @@ public:
 
     int Height() const noexcept{return height_;}
     int Width() const noexcept {return width_;}
-    
-    /// @brief Set a specific pixel to an RGB color. Note that origin is at the top left rather than bottom left
-    /// @param row Row in image
-    /// @param x x coordinate in pixel space
-    /// @param y y coordinate in pixel space 
+
     void Set(int x, int y, const DataType& val) {
+        //const std::lock_guard<std::mutex> lock(mtx);
         data_[y*width_+ x] = val;
     }
-    
+        
     [[nodiscard]] DataType Get(int x, int y) const {
+        //const std::lock_guard<std::mutex> lock(mtx);
         return data_[y*width_+ x];
     }
 
+    //Direct accessors. Not thread-safe.
     DataType& operator[](int i) {return  data_[i];};
     const DataType& operator[](int i) const {return data_[i];};
+
+    void Write(std::ofstream& out) requires(std::same_as<DataType,Vec3f>){
+        out<<"P3\n"<<Height()<<" "<<Width()<<"\n255\n"; 
+        for(const auto& pixel : data_) {
+        const auto&[r,g,b] = pixel.Data(); //Get current pixel
+        out<< static_cast<int>(255.999*r)<< " "<< static_cast<int>(255.999*g)<<" "<<static_cast<int>(255.999*b)<<'\n'; //Scale and write to file
+        }
+    }
+
+    void Write(std::ofstream& out) requires(std::same_as<DataType,float>){
+        out<<"P3\n"<<Height()<<" "<<Width()<<"\n255\n"; 
+        for(const auto& pixel : data_) {
+            out<<pixel<<'\n';
+        }
+    }
 
     //Iterators
     auto begin() { return data_.begin(); }

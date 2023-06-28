@@ -182,10 +182,8 @@ Buffer<Color3f> ParsePPMTexture(std::string_view filename) {
     int idx = 0;
     while(file>>r>>g>>b) {
         Color3f col{std::stof(r)/255.f,std::stof(g)/255.f,std::stof(b)/255.f};
-        buffer[idx] = col;
-        ++idx;
+        buffer[idx++] = col;
     }
-
     return buffer;
 };
 

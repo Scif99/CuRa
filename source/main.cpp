@@ -11,19 +11,20 @@
 #include "buffer.h"
 #include "camera.h"
 #include "gourad_shader.h"
+#include "depth_shader.h"
 #include "light.h"
 #include "line.h"
 #include "mat.h"
 #include "math.h"
 #include "model.h"
 #include "pipeline.h"
-#include "ppm_image.h"
 #include "rasteriser.h"
 #include "shader.h"
+#include "transforms.h"
 #include "triangle.h"
 #include "vec.h"
 
-//std::optional<Triangle> Clipped(const Triangle& triangle) {};
+std::optional<Triangle> Clipped(const Triangle& triangle) {return triangle;}
 
 int main() {
 
@@ -34,23 +35,27 @@ int main() {
     Buffer<float> depth_buffer(height, width, -std::numeric_limits<float>::max()); //Create Depth buffer Assume +z is towards camera?
 
     //Load model
-    const Model head("assets/models/head.obj");
-    //Load texture for model
-    const Buffer<Color3f> diffuse_map = ParsePPMTexture("assets/textures/head_diffuse.ppm");
-    const Buffer<Color3f> specular_map = ParsePPMTexture("assets/textures/head_spec.ppm");
-    const Buffer<Vec3f> normal_map = ParsePPMTexture("assets/textures/african_head_nm.ppm");
+    // const Model head("assets/models/head.obj");
+    // const Buffer<Color3f> diffuse_map =  ParsePPMTexture("assets/textures/head_diffuse.ppm");
+    // const Buffer<Color3f> specular_map = ParsePPMTexture("assets/textures/head_spec.ppm");
+    // const Buffer<Vec3f> normal_map = ParsePPMTexture("assets/textures/head_nm.ppm");
+
+    const Model head("assets/models/diablo3_pose.obj");
+    const Buffer<Color3f> diffuse_map =  ParsePPMTexture("assets/textures/diablo3_pose_diffuse.ppm");
+    const Buffer<Color3f> specular_map = ParsePPMTexture("assets/textures/diablo3_pose_spec.ppm");
+    const Buffer<Vec3f> normal_map = ParsePPMTexture("assets/textures/diablo3_pose_nm.ppm");
 
 
 
     //Initialise scene entities
-    const Camera camera(Vec3f{1.f,1.f,3.f}, //eye
+    const Camera camera(Vec3f{0.f,0.f,2.f}, //eye
                         Vec3f{0.f,0.f,0.f}, //center
                         Vec3f{0.f,1.f,0.f}); //up
     
     //Directional (distant) light
     const Norm3f light_dir{Vec3f{0.f,0.f,-1.f}};
     const DistantLight light = {light_dir, 
-                                Color3f{0.2f,0.2f,0.2f}, //diffuse
+                                Color3f{0.2f,0.2f,0.2f}, //ambient
                                 Color3f{0.5f,0.5f,0.5f}, //diffuse
                                 Color3f{1.f,1.f,1.f} }; //specular
 
@@ -58,7 +63,7 @@ int main() {
     auto model_matrix = Mat4f::Identity(); 
     //model_matrix = Translate(model_matrix, Vec3f{0.f,0.f,-1.2f});
     Mat4f view_matrix = LookAt(camera.eye, camera.center, camera.up);
-    Mat4f proj_matrix = Projection(-2.f,-4.f,-1.f,1.f,-1.f,1.f);
+    Mat4f proj_matrix = Projection(-1.f,-4.f,-1.f,1.f,-1.f,1.f);
 
     //Create Shader
     GouradShader g_shader;
@@ -92,7 +97,7 @@ int main() {
             const auto n = UnitVector(head.Normals()[norm_indices[i]]);
             const auto tex_coords = head.TexCoords()[tex_indices[i]];
 
-            VertexAttributes vert  = {v,n,tex_coords};
+            Vertex vert  = {v,n,tex_coords};
             //Run Vertex Shader 
             const auto processed = g_shader.PerVertex(vert);
 
@@ -105,12 +110,12 @@ int main() {
         
 
         //Clipping
-        //std::optional<Triangle> clipped = Clipped(triangle);
-        //if(!clipped) continue;
-        //triangle = clipped.value();
+        std::optional<Triangle> clipped = Clipped(triangle);
+        if(!clipped) continue;
+        triangle = clipped.value();
 
         //Convert to Window Space
-        std::for_each(triangle.vertices.begin(),triangle.vertices.end(), [&](ProcessedVertex& vertex) {
+        std::for_each(triangle.vertices.begin(),triangle.vertices.end(), [&](ShadedVertex& vertex) {
                 const auto p_divide{1.f/vertex.clip_coords.W()};
                 const auto v_ndc = Cartesian(vertex.clip_coords*p_divide);//Apply perspective divide
                 const auto v_screen = ViewPort(v_ndc,image_buffer.Height(),image_buffer.Width(), true); //Apply viewport transform
@@ -135,16 +140,17 @@ int main() {
 
             //Depth Test
             //Remember that smaller z means further away (camera faces -z)
+            //NOTE Can move this to before fragment shader...
             if(pos.Z()>depth_buffer.Get(pos.X(),pos.Y())) {
                 depth_buffer.Set(pos.X(),pos.Y(),pos.Z());
                 image_buffer.Set(pos.X(),pos.Y(),col);
             }
+
+            //Blending
         }
     }
-
     //Create image from buffer and write to file
-    PPMImage image{std::move(image_buffer)};
     std::ofstream out_file("image.ppm");
 	if(!out_file) {std::cerr<<"Error creating file\n"; return 1;};
-	image.Write(out_file);
+	image_buffer.Write(out_file);
 }

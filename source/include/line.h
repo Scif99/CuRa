@@ -3,7 +3,6 @@
 
 #include "buffer.h"
 #include "math.h"
-#include "ppm_image.h"
 #include "vec.h"
 
 //Subroutine for drawing a line that mostly decreases in y 
