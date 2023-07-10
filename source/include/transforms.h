@@ -20,8 +20,8 @@
 [[nodiscard]] Mat4f LookAt(const Vec3f& eye, const Vec3f& center, const Vec3f& up) {
     //Construct an orthonormal basis
     const auto w = Norm3f{eye - center}; //'forward' axis. By convention, the camera should be facing in the -z direction
-    const auto u = Norm3f{Cross<float,3>(up,w)}; //'right' axis
-    const auto v = Norm3f{Cross<float, 3>(w,u)}; //'up' axis
+    const auto u = Norm3f{Cross<float>(up,w)}; //'right' axis
+    const auto v = Norm3f{Cross<float>(w,u)}; //'up' axis
         
     //The goal of the view matrix is to transform from our standard basis to the camera basis
     //NOTE: Don't forget the translation.

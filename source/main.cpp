@@ -1,6 +1,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <chrono>
 #include <iostream>
 #include <memory>
 #include <numeric>
@@ -10,45 +11,64 @@
 
 #include "buffer.h"
 #include "camera.h"
-#include "gourad_shader.h"
 #include "depth_shader.h"
 #include "light.h"
 #include "line.h"
 #include "mat.h"
 #include "math.h"
 #include "model.h"
+#include "normal_map_shader.h"
 #include "pipeline.h"
 #include "rasteriser.h"
 #include "shader.h"
+#include "texture.h"
 #include "transforms.h"
 #include "triangle.h"
 #include "vec.h"
 
 std::optional<Triangle> Clipped(const Triangle& triangle) {return triangle;}
 
+struct Statistics {
+    float num_triangles; //Total number of input triangles
+    float culled_triangles;
+    float clipped_triangles{0};
+    std::chrono::duration<double> time;
+
+    void Log(std::ostream& os) {
+        std::cout<<"Total Model triangles:\t"<< num_triangles<<"\n";
+        std::cout<<"Culled triangles:\t" <<culled_triangles<<"\n";
+        std::cout<<"time Taken:\t" <<time.count()<<"s\n";
+    }
+};
+
 int main() {
+
+    Statistics stats;
+    const auto start = std::chrono::steady_clock::now();
 
 	constexpr int height{800};
 	constexpr int width{800};
 
     Buffer<Color3f> image_buffer(height, width);
     Buffer<float> depth_buffer(height, width, -std::numeric_limits<float>::max()); //Create Depth buffer Assume +z is towards camera?
+    Buffer<float> shadow_map(height, width, -std::numeric_limits<float>::max()); //For shadows
+
 
     //Load model
-    // const Model head("assets/models/head.obj");
-    // const Buffer<Color3f> diffuse_map =  ParsePPMTexture("assets/textures/head_diffuse.ppm");
-    // const Buffer<Color3f> specular_map = ParsePPMTexture("assets/textures/head_spec.ppm");
-    // const Buffer<Vec3f> normal_map = ParsePPMTexture("assets/textures/head_nm.ppm");
+    const Model head("assets/models/head.obj");
+    const Buffer<Color3f> diffuse_map =  ParsePPMTexture("assets/textures/head_diffuse.ppm");
+    const Buffer<Color3f> specular_map = ParsePPMTexture("assets/textures/head_spec.ppm");
+    const Buffer<Vec3f> normal_map = ParsePPMTexture("assets/textures/head_nm.ppm");
 
-    const Model head("assets/models/diablo3_pose.obj");
-    const Buffer<Color3f> diffuse_map =  ParsePPMTexture("assets/textures/diablo3_pose_diffuse.ppm");
-    const Buffer<Color3f> specular_map = ParsePPMTexture("assets/textures/diablo3_pose_spec.ppm");
-    const Buffer<Vec3f> normal_map = ParsePPMTexture("assets/textures/diablo3_pose_nm.ppm");
+    // const Model head("assets/models/diablo3_pose.obj");
+    // const Buffer<Color3f> diffuse_map =  ParsePPMTexture("assets/textures/diablo3_pose_diffuse.ppm");
+    // const Buffer<Color3f> specular_map = ParsePPMTexture("assets/textures/diablo3_pose_spec.ppm");
+    // const Buffer<Vec3f> normal_map = ParsePPMTexture("assets/textures/diablo3_pose_nm.ppm");
 
 
 
     //Initialise scene entities
-    const Camera camera(Vec3f{0.f,0.f,2.f}, //eye
+    const Camera camera(Vec3f{0.f,0.f,1.5f}, //eye
                         Vec3f{0.f,0.f,0.f}, //center
                         Vec3f{0.f,1.f,0.f}); //up
     
@@ -56,7 +76,7 @@ int main() {
     const Norm3f light_dir{Vec3f{0.f,0.f,-1.f}};
     const DistantLight light = {light_dir, 
                                 Color3f{0.2f,0.2f,0.2f}, //ambient
-                                Color3f{0.5f,0.5f,0.5f}, //diffuse
+                                Color3f{0.7f,0.7f,0.7f}, //diffuse
                                 Color3f{1.f,1.f,1.f} }; //specular
 
     //Note the transformations are defined outside the loop, as they apply to ALL vertices in the model
@@ -66,30 +86,28 @@ int main() {
     Mat4f proj_matrix = Projection(-1.f,-4.f,-1.f,1.f,-1.f,1.f);
 
     //Create Shader
-    GouradShader g_shader;
+    NormalMapShader nm_shader;
     //Set Uniforms in shader
-    g_shader.SetUniform("model", model_matrix);
-    g_shader.SetUniform("view", view_matrix);
-    g_shader.SetUniform("projection", proj_matrix);
+    nm_shader.SetUniform("model", model_matrix);
+    nm_shader.SetUniform("view", view_matrix);
+    nm_shader.SetUniform("projection", proj_matrix);
     
-    g_shader.SetUniform("light_dir", light.Direction);
-    g_shader.SetUniform("light_ambient", light.Ambient);
-    g_shader.SetUniform("light_diffuse", light.Diffuse);
-    g_shader.SetUniform("light_specular", light.Specular);
-    g_shader.SetUniform("view_pos", camera.eye);
+    nm_shader.SetUniform("light_dir", light.Direction);
+    nm_shader.SetUniform("light_ambient", light.Ambient);
+    nm_shader.SetUniform("light_diffuse", light.Diffuse);
+    nm_shader.SetUniform("light_specular", light.Specular);
+    nm_shader.SetUniform("view_pos", camera.eye);
 
     //Set textures
-    g_shader.SetTexture("diffuse", &diffuse_map);
-    g_shader.SetTexture("specular", &specular_map);
-    g_shader.SetTexture("normal", &normal_map);
-    
-    //Iterate over each face (triangle) in the model
-    for(const auto& [vert_indices, tex_indices, norm_indices] : head.Faces()) {
+    nm_shader.SetTexture("diffuse", &diffuse_map);
+    nm_shader.SetTexture("specular", &specular_map);
+    nm_shader.SetTexture("normal", &normal_map);
 
+    //Iterate over each face (triangle) in the model
+    for(const auto& [vert_indices, norm_indices, tex_indices] : head.Faces()) {
+        ++stats.num_triangles;
 
         Triangle triangle;
-
-        //Pass vertices through transforms
         for(int i =0; i<3; ++i) {
 
             //Extract vertex attributes from the model using face indices
@@ -97,11 +115,11 @@ int main() {
             const auto n = UnitVector(head.Normals()[norm_indices[i]]);
             const auto tex_coords = head.TexCoords()[tex_indices[i]];
 
+           //Run Vertex Shader 
             Vertex vert  = {v,n,tex_coords};
-            //Run Vertex Shader 
-            const auto processed = g_shader.PerVertex(vert);
+            const auto processed = nm_shader.PerVertex(vert);
 
-            //PRIMITIVE ASSEMBLY
+            //Assemble Primitives
             triangle.vertices[i] = processed;
 
         }
@@ -110,37 +128,42 @@ int main() {
         
 
         //Clipping
-        std::optional<Triangle> clipped = Clipped(triangle);
-        if(!clipped) continue;
-        triangle = clipped.value();
+        //If all 3 vertices lie outside frustum, then we clip the whole thing
+        //Partially clipped triangles will still be drawn...
+        std::optional<Triangle> clipped_triangle = Clipped(triangle);
+        if(!clipped_triangle) {
+            continue;
+        }
+        triangle = clipped_triangle.value();
 
-        //Convert to Window Space
+        //Transform to Window Space
         std::for_each(triangle.vertices.begin(),triangle.vertices.end(), [&](ShadedVertex& vertex) {
-                const auto p_divide{1.f/vertex.clip_coords.W()};
-                const auto v_ndc = Cartesian(vertex.clip_coords*p_divide);//Apply perspective divide
+                const auto p_divide{1.f/vertex.coords.W()}; 
+                const auto v_ndc = Cartesian(vertex.coords*p_divide);//Apply perspective divide
                 const auto v_screen = ViewPort(v_ndc,image_buffer.Height(),image_buffer.Width(), true); //Apply viewport transform
-                vertex.clip_coords = Vec4f(v_screen,1.f);
+                vertex.coords = Vec4f(v_screen,1.f); //store window space coords
         });
 
-
-        //Culling
         //Backface culling
-        //If the dot product is negative then it means the triangle is not facing the camera (same as light in this case)
-        // auto angle = Dot()
-        // if(dot<0.f) continue;
+        //If the triangle is not facing the view direction, we don't have to render it
+        const auto face_norm = Norm3f(Cross(Cartesian(triangle.vertices[1].coords - triangle.vertices[0].coords), 
+                                Cartesian(triangle.vertices[2].coords - triangle.vertices[0].coords)));
+        if(face_norm.Z()>0) {
+            ++stats.culled_triangles;
+            continue;
+        }
 
 
         //Rasterise the triangle into fragments
-        const std::vector<Fragment> vec_frags = Rasterise(triangle, image_buffer);
+        const auto fragments = Rasterise(triangle, image_buffer);
         
         //FRAGMENT PROCESSING
-        for(const auto& fragment : vec_frags) {
+        for(const auto& frag : fragments) {
             //Run fragment shader
-            const auto& [pos,col] = g_shader.PerFragment(fragment); 
+            const auto& [pos,col] = nm_shader.PerFragment(frag); 
 
             //Depth Test
             //Remember that smaller z means further away (camera faces -z)
-            //NOTE Can move this to before fragment shader...
             if(pos.Z()>depth_buffer.Get(pos.X(),pos.Y())) {
                 depth_buffer.Set(pos.X(),pos.Y(),pos.Z());
                 image_buffer.Set(pos.X(),pos.Y(),col);
@@ -153,4 +176,10 @@ int main() {
     std::ofstream out_file("image.ppm");
 	if(!out_file) {std::cerr<<"Error creating file\n"; return 1;};
 	image_buffer.Write(out_file);
+
+
+    const auto end = std::chrono::steady_clock::now();
+    stats.time = end - start;
+    stats.Log(std::cout);
+
 }

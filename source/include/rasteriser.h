@@ -27,9 +27,9 @@
 [[nodiscard]] std::optional<std::array<float,3>> Opt_InTriangle(const Vec2f& p, const Triangle& t) {
 
     //Extract 2D screen coordinates of each vertex
-    const auto& v0 = Vec2f(t.vertices[0].clip_coords.X(),t.vertices[0].clip_coords.Y());
-    const auto& v1 = Vec2f(t.vertices[1].clip_coords.X(),t.vertices[1].clip_coords.Y());
-    const auto& v2 = Vec2f(t.vertices[2].clip_coords.X(),t.vertices[2].clip_coords.Y());
+    const auto& v0 = Vec2f(t.vertices[0].coords.X(),t.vertices[0].coords.Y());
+    const auto& v1 = Vec2f(t.vertices[1].coords.X(),t.vertices[1].coords.Y());
+    const auto& v2 = Vec2f(t.vertices[2].coords.X(),t.vertices[2].coords.Y());
 
     auto l0{EdgeFunction(v1, v2, p)}; // signed area of the triangle v1v2p multiplied by 2
     auto l1{EdgeFunction(v2, v0, p)}; // signed area of the triangle v2v0p multiplied by 2
@@ -49,23 +49,32 @@
 }
 
 
+
+
 //Determines visibility of a triangle
 //In terms of the pipeline, rakes a triangle primitive and breaks it down into fragments
 //Interpolates any per-vertex attributes to get a value for the fragment
 [[nodiscard]] std::vector<Fragment> Rasterise(const Triangle& triangle, const Buffer<Color3f>& image_buf) {
-
     std::vector<Fragment> triangle_frags; //The fragments that make up the triangle
 
-    for(int y =0; y < image_buf.Height(); ++y ) {
-        for(int x = 0; x <image_buf.Width(); ++x) {
+    //Get bounding values
+    const int min_x = std::min({triangle.vertices[0].coords.X(),triangle.vertices[1].coords.X(),triangle.vertices[2].coords.X()});
+    const int max_x = std::max({triangle.vertices[0].coords.X(),triangle.vertices[1].coords.X(),triangle.vertices[2].coords.X()});
+
+    const int min_y = std::min({triangle.vertices[0].coords.Y(),triangle.vertices[1].coords.Y(),triangle.vertices[2].coords.Y()});
+    const int max_y = std::max({triangle.vertices[0].coords.Y(),triangle.vertices[1].coords.Y(),triangle.vertices[2].coords.Y()});
+
+    for(int y = min_y; y <= max_y; ++y ) {
+        for(int x = min_x;  x <= max_x; ++x) {
             // Check if the pixel lies inside the triangle
             if (auto bary_coords = Opt_InTriangle(Point2f(x,y),triangle); bary_coords) {
                 const auto& [l0,l1,l2] = bary_coords.value(); //unpack barycentric coordinates
                 const auto& [v0,v1,v2] = triangle.vertices; //Unpack vertices of triangle
 
-                Fragment frag;
                 //Interpolate all per-vertex attributes
-                const float frag_depth = l0*v0.clip_coords.Z() + l1*v1.clip_coords.Z() + l2*v2.clip_coords.Z();
+                const float frag_depth = l0*v0.coords.Z() + l1*v1.coords.Z() + l2*v2.coords.Z(); //Required
+
+                Fragment frag;
                 frag.window_coords = Vec3f(x,y,frag_depth);
                 frag.tex_coords = l0*v0.tex_coords + l1*v1.tex_coords + l2*v2.tex_coords;
                 frag.normal = l0*v0.world_norm + l1*v1.world_norm + l2*v2.world_norm;         

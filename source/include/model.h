@@ -30,16 +30,15 @@
 // e.g. pos_idx[0] is the index to the vertex position of the first vertex
 struct Face {
     std::vector<int> pos_idx;
-    std::vector<int> tex_idx;
     std::vector<int> norm_idx;
-
+    std::vector<int> tex_idx;
 };
 
 class Model {
 private:
     std::vector<Vec3f> vertices_;
+        std::vector<Vec3f> normals_;
     std::vector<Vec2f> tex_coords_;
-    std::vector<Vec3f> normals_;
     std::vector<Face> faces_;
 
     void Parse(std::string_view filename);
@@ -99,12 +98,12 @@ Face Model::ParseOBJFaceIndices(std::string_view line) {
     for(auto it = words.begin()+1; it!=words.end();++it) {
         //Each element is now something like '6/4/1'.
         //We split again by '/' and then extract the data
-        const auto attribs = Split(*it,'/');
+        const auto indices = Split(*it,'/');
         //we have now split '6/4/1' into  the sequence 6,4,2
         //Remember to subtract 1 from the index to get 0-indexing
-        face.pos_idx.push_back(std::stoi(attribs[0]) - 1); //Position
-        face.tex_idx.push_back(std::stoi(attribs[1]) - 1); //Texture coord
-        face.norm_idx.push_back(std::stoi(attribs[2]) - 1); //Normal
+        face.pos_idx.push_back(std::stoi(indices[0]) - 1); //Position
+        face.tex_idx.push_back(std::stoi(indices[1]) - 1); //Texture coord
+        face.norm_idx.push_back(std::stoi(indices[2]) - 1); //Normal
 
     }
 
@@ -141,50 +140,5 @@ void Model::Parse(std::string_view filename) {
     }
 };
 
-
-//TODO Better error handling (exceptions?)
-Buffer<Color3f> ParsePPMTexture(std::string_view filename) {
-    //#1 
-    if(!filename.ends_with(".ppm")) {
-        std::cerr<<"incorrect file format\n";
-    }
-
-    std::ifstream file(filename.data());
-    if(!file) {
-        std::cerr<<"Error loading file\n";
-    }
-
-    //the first line is the format
-    std::string s;
-    file>>s;
-    if(s!="P3") {
-        std::cerr<<"Wrong file type\n";
-    }
-
-    //The next two words are the width and height of the image respectively
-    file>>s;
-    auto width = std::stoi(s);
-    file>>s;
-    auto height = std::stoi(s);
-
-    //The next word is the colour range  (should be 255)
-    file>>s;
-    if(s!="255") {
-        std::cerr<<"Wrong color range\n";
-    }
-
-    //Now that we know the dimensions, we can create a buffer to extract the data into
-    Buffer<Color3f> buffer(height,width);
-
-    //Now we read in three values at a time, r,g,b.
-    //Scale the values to the range [0,1]
-    std::string r,g,b;
-    int idx = 0;
-    while(file>>r>>g>>b) {
-        Color3f col{std::stof(r)/255.f,std::stof(g)/255.f,std::stof(b)/255.f};
-        buffer[idx++] = col;
-    }
-    return buffer;
-};
 
 #endif

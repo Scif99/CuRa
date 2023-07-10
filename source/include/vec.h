@@ -199,7 +199,7 @@ inline constexpr auto Dot(const Vec<Prec, Dim>& u, const Vec<Prec, Dim>& v)
     return  std::inner_product(u.cbegin(),u.cend(),v.cbegin(),static_cast<Prec>(0.f));
 }
 
-template<Decimal Prec, std::size_t Dim>
+template<Decimal Prec>
 inline constexpr auto Cross(const Vec<Prec, 3>& u, const Vec<Prec, 3>& v)
 {
     return Vec<Prec,3>(u[1]*v[2]-u[2]*v[1],

@@ -1,6 +1,20 @@
-#include "gourad_shader.h"
+#ifndef GOURAD_H
+#define GOURAD_H
 
-ShadedVertex GouradShader::PerVertex(const Vertex& vertex) {
+#include "shader.h"
+#include "vec.h"
+
+class NormalMapShader : public Shader {
+public:
+    [[nodiscard]] ShadedVertex PerVertex(const Vertex& vertex) override;
+    [[nodiscard]] ShadedFragment PerFragment(const Fragment& frag) override;
+
+public:
+    //Vertex -> Frag params (parameters that are passed from vertex shader to fragment shader)
+    Vec3f frag_pos;
+};
+
+inline ShadedVertex NormalMapShader::PerVertex(const Vertex& vertex) {
     //IN params
     auto& [aPos, aNormal, aTexCoord] = vertex; //unpack the vertex
 
@@ -9,29 +23,29 @@ ShadedVertex GouradShader::PerVertex(const Vertex& vertex) {
     const auto view = GetUniform<Mat4f>("view");
     const auto projection =  GetUniform<Mat4f>("projection");
 
-    //OUT params (sent to fragment shader)
+    //OUT params (Interpolated during rasterisation then sent to fragment shader)
     Vec4f gl_position;
-    Color3f vertex_diffuse;
+    Vec3f vertex_world_normal;
+
 
     const auto world_pos = model*Vec4f(aPos,1.f);
     gl_position =  projection*view*world_pos; //vertex position in clip space
 
-    SetUniform("frag_pos", Cartesian(world_pos));
+    frag_pos = Cartesian(world_pos);
 
-    //Compute diffuse component at the vertex
+    //Transform normal
     const auto normal_transform =  Invert(Transpose(model)).value(); //TODO can this be indeterminate?
-    const auto world_norm = Cartesian(normal_transform*Vec4f(aNormal,0.f));  //w is zero as normal should be unaffected by translations
+    vertex_world_normal = Cartesian(normal_transform*Vec4f(aNormal,0.f));  //w is zero as normal should be unaffected by translations
 
     ShadedVertex out = {
         gl_position,
-        UnitVector(world_norm),
+        UnitVector(vertex_world_normal),
         aTexCoord
     };
     return out; 
 };  
 
-
-ShadedFragment GouradShader::PerFragment(const Fragment& frag) {
+inline ShadedFragment NormalMapShader::PerFragment(const Fragment& frag) {
 
     //INPUT
     const auto& [w_coords, norm, tex_coords] = frag;
@@ -41,7 +55,6 @@ ShadedFragment GouradShader::PerFragment(const Fragment& frag) {
     const auto light_ambient = GetUniform<Color3f>("light_ambient");
     const auto light_diffuse = GetUniform<Color3f>("light_diffuse");
     const auto light_specular = GetUniform<Color3f>("light_specular");
-    const auto frag_pos  = GetUniform<Vec3f>("frag_pos");
     const auto view_pos = GetUniform<Vec3f>("view_pos");
     const auto model = GetUniform<Mat4f>("model"); //Need the model matrix again to transform the normal
     //OUTPUT
@@ -73,3 +86,5 @@ ShadedFragment GouradShader::PerFragment(const Fragment& frag) {
 
     return frag_data;
     };
+
+#endif

@@ -3,8 +3,6 @@
 
 #include  "vec.h"
 
-
-
 enum class VertexAttribute {
     Position,
     Normal,
@@ -21,8 +19,9 @@ struct Vertex {
 
 //Produced by the vertex shader.
 //Is returned form the vertex shader.
+//All of the per-vertex attributes will be interpolated over during rasterisation
 struct ShadedVertex {
-    Vec4f clip_coords;
+    Vec4f coords; //Required for all shaders
     Vec3f world_norm;
     Vec2f tex_coords;
 };

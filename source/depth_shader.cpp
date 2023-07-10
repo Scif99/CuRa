@@ -10,4 +10,8 @@
 
 [[nodiscard]] ShadedFragment DepthShader::PerFragment(const Fragment& frag) {
 
+    ShadedFragment shaded;
+    shaded.pos = frag.window_coords;
+    shaded.FragColor = Vec3f(shaded.pos.Z(),shaded.pos.Z(), shaded.pos.Z());
+    return shaded;
 }
