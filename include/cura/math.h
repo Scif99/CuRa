@@ -1,17 +1,39 @@
 #pragma once
 
-#include <vector>
 
-#include <cura/vec.h>
+#include <linalg.h>
 
 
-/// @brief Evaluates the implicit equation of a line at a particular point.
-/// @brief The point lies on the line if the return value is zero.
-/// @brief Assumes x0<x1
-/// @param x_at x coordinate to evaluate at
-/// @param y_at y coordinate to evaluate at
-/// @return Value of the equation evaluated at (x_at,y_at). Is zero if the point lies on the line.
-[[nodiscard]] inline float ImplicitLine(float x0, float y0, float x1, float y1, float x_at, float y_at) {
-    //assert(x0<x1);
-    return (y0 - y1)*x_at + (x1-x0)*y_at + x0*y1 - x1*y0;
-}
+namespace la = linalg;
+
+using Vec1f = la::vec<float,1>;
+using Vec1i = la::vec<std::int32_t,1>;
+using Vec1u = la::vec<std::uint32_t,1>;
+
+using Vec2f = la::vec<float,2>;
+using Vec2i = la::vec<std::int32_t,2>;
+using Vec2u = la::vec<std::uint32_t,2>;
+
+
+using Vec3f   = la::vec<float,3>;
+using Vec3i   = la::vec<std::int32_t,3>;
+using Vec3u   = la::vec<std::uint32_t,3>;
+
+using Color3f = Vec3f;
+using Color3d = Vec3d;
+using Color3u = Vec3u;
+
+
+using Vec4f = la::vec<float,4>;
+using Vec4i = la::vec<std::int32_t,4>;
+using Vec4u = la::vec<std::uint32_t,4>;
+
+using Color4f = Vec4f;
+using Color4u = Vec4u;
+
+using Mat22f = la::mat<float,2,2>;
+using Mat22d = la::mat<double,2,2>;
+using Mat33f = la::mat<float,3,3>;
+using Mat33d = la::mat<double,3,3>;
+using Mat44f = la::mat<float,4,4>;
+using Mat44d = la::mat<double,4,4>;

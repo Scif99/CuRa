@@ -23,26 +23,18 @@ list(
   include/cura/camera.h
   include/cura/light.h
   include/cura/line.h
-  include/cura/mat.h
   include/cura/math.h
-  include/cura/mesh.h
   include/cura/model.h
   include/cura/normal_map_shader.h
-  include/cura/pipeline.h
   include/cura/quad_shader.h
   include/cura/rasterizer.h
   include/cura/shader.h
   include/cura/texture.h
   include/cura/transforms.h
   include/cura/triangle.h
-  include/cura/vec.h
   include/cura/vertex.h
 
   #source files
-
-  #01
-  #src/01Triangle/assignment01Triangle.cpp
-
   #02
 
 )
@@ -67,7 +59,9 @@ target_include_directories(
 # Add executables and link with cura_lib
 # ============================================================================
 
+#add_executable(assignment01 src/01Triangle/01Triangle.cpp)
 add_executable(assignment01 src/01Triangle/01Triangle.cpp)
+
 target_link_libraries(assignment01 PRIVATE cura_lib)
 
 
