@@ -3,7 +3,6 @@
 #include <cura/vec.h>
 
 struct Camera{
-
     Camera(const Vec3f& e, const Vec3f& c, const Vec3f& u)
         : eye{e}, center{c}, up{u} {}
 

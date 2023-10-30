@@ -40,11 +40,12 @@ list(
   include/cura/vertex.h
 
   #source files
-  src/shaders/depth_shader.cpp
+
+  #01
+  #src/01Triangle/assignment01Triangle.cpp
 
 
-  # cmake-format: off
-  # cmake-format: on
+
 )
 
 add_library(cura_lib OBJECT ${cura_lib_SOURCES})
@@ -67,7 +68,7 @@ target_include_directories(
 # Add executables and link with cura_lib
 # ============================================================================
 
-add_executable(assignment01 src/assignment01Triangle.cpp)
+add_executable(assignment01 src/01Triangle/assignment01Triangle.cpp)
 target_link_libraries(assignment01 PRIVATE cura_lib)
 
 
