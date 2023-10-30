@@ -7,3 +7,4 @@
 struct Triangle {
     std::array<ShadedVertex, 3> vertices;
 };
+

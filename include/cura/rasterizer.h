@@ -3,12 +3,20 @@
 #include <array>
 #include <optional>
 
-
 #include "triangle.h"
 #include "vec.h"
 
-// Returns a positive value if p lies to the right of the edge vector
-// The value of the result is used in computing barycentric coordinates
+
+
+/// @brief  Determines whether a point lies to the 'left' or 'right' of a line. Note all vectors are assumed to be in pixel (screen) space with a top-left origin.
+/// @param tail Tail of the edge vector (i.e where the vector 'begins').
+/// @param head Head of the edge vector (i.e. where the vector 'ends').
+/// @param p    Point to be tested.
+/// @return     Signed area of the parallelogram defined by the edge and the point. 
+///             If the value is positive, then the point lies to the left of the line.
+///             If the value is negative, then the point lies to the right of the line.
+///             If the value is zero, then the point lies on the line.
+///             The value is used to compute barycentric coordinates
 [[nodiscard]] float EdgeFunction(const Vec2f& vtail, const Vec2f& vhead, const Vec2f& p) {
 
     assert(vtail!=vhead);

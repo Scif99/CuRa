@@ -11,7 +11,6 @@
 
 #include "cura/buffer.h"
 #include "cura/camera.h"
-#include "cura/depth_shader.h"
 #include "cura/light.h"
 #include "cura/line.h"
 #include "cura/mat.h"

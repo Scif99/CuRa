@@ -21,7 +21,6 @@ list(
 
   include/cura/buffer.h
   include/cura/camera.h
-  include/cura/depth_shader.h
   include/cura/light.h
   include/cura/line.h
   include/cura/mat.h
@@ -44,7 +43,7 @@ list(
   #01
   #src/01Triangle/assignment01Triangle.cpp
 
-
+  #02
 
 )
 
@@ -68,9 +67,12 @@ target_include_directories(
 # Add executables and link with cura_lib
 # ============================================================================
 
-add_executable(assignment01 src/01Triangle/assignment01Triangle.cpp)
+add_executable(assignment01 src/01Triangle/01Triangle.cpp)
 target_link_libraries(assignment01 PRIVATE cura_lib)
 
+
+add_executable(assignment02 src/02Mesh/02Mesh.cpp)
+target_link_libraries(assignment02 PRIVATE cura_lib)
 
 add_executable(part1 src/main.cpp)
 target_link_libraries(part1 PRIVATE cura_lib)

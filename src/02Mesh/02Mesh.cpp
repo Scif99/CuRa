@@ -91,10 +91,11 @@ int main() {
 
 	constexpr int height{800};
 	constexpr int width{800};
-	
-	Buffer<Color3f> image{height,width};
-	std::ofstream out_file{"/home/sc2046/Projects/Graphics/CuRa/scenes/01Triangle/triangle.ppm"};
-    constexpr auto white = std::array{1.f,1.f,1.f};
+
+    constexpr auto white = Color3f{1.f,1.f,1.f};	
+	Buffer<Color3f> image{height,width, white};
+	std::ofstream out_file{"/home/sc2046/Projects/Graphics/CuRa/scenes/02Mesh/face_mesh.ppm"};
+
 
     Model head("assets/models/head.obj");
 
