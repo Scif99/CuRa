@@ -1,71 +1,63 @@
 #pragma once
 
 #include <cassert>
-#include <concepts>
 #include <fstream>
-#include <mutex>
 #include <vector>
+#include <cstdint>
 
-#include <cura/vec.h>
+#include <cura/math.h>
 
-/// @brief A buffer models a 2D block of data.
+/// @brief A framebuffer is a 2D buffer that contains data used for rendering.
 /// @brief Follows the 'top-left origin' convention
-/// @tparam T Type of the data stored
-template<typename DataType>
-requires (std::same_as<DataType,float> || std::same_as<DataType,Vec3f> || std::same_as<DataType,Norm3f>)
-class Buffer {
-private:
-    std::vector<DataType> data_;
-    int height_;
-    int width_;
-    //std::mutex mtx;
-
+class FrameBuffer {
 public:
+
     //Construct with empty values
-    Buffer(int height, int width)
-        : height_{height}, width_{width} {data_.resize(height*width);}
+    FrameBuffer(std::int32_t h, std::int32_t w)
+        : height{h}, width{w} 
+        {
+            assert(h%2==0 && w%2==0 &&"Error: Framebuffer dimensions must be even!");
 
-    //Construct with default values
-    Buffer(int height, int width, const DataType& def)
-        : data_(height*width, def), height_{height}, width_{width} {}
-
-    int Height() const noexcept{return height_;}
-    int Width() const noexcept {return width_;}
-
-    void Set(int x, int y, const DataType& val) {
-        //const std::lock_guard<std::mutex> lock(mtx);
-        data_[y*width_+ x] = val;
-    }
-        
-    [[nodiscard]] DataType Get(int x, int y) const {
-        //const std::lock_guard<std::mutex> lock(mtx);
-        return data_[y*width_+ x];
-    }
-
-    //Direct accessors. Not thread-safe.
-    DataType& operator[](int i) {return  data_[i];};
-    const DataType& operator[](int i) const {return data_[i];};
-
-    void Write(std::ofstream& out) requires(std::same_as<DataType,Vec3f>){
-        out<<"P3\n"<<Height()<<" "<<Width()<<"\n255\n"; 
-        for(const auto& pixel : data_) {
-        const auto&[r,g,b] = pixel.Data(); //Get current pixel
-        out<< static_cast<int>(255.999*r)<< " "<< static_cast<int>(255.999*g)<<" "<<static_cast<int>(255.999*b)<<'\n'; //Scale and write to file
+            colors.resize(h*w);
+            depths.resize(h*w);
         }
-    }
 
-    void Write(std::ofstream& out) requires(std::same_as<DataType,float>){
-        out<<"P3\n"<<Height()<<" "<<Width()<<"\n255\n"; 
-        for(const auto& pixel : data_) {
+    // helpers that look up colors and depths for sample s of pixel (x,y):
+	Color3f& Color(std::int32_t x, std::int32_t y) {
+		return colors[y*width+ x];
+	}
+	Color3f const& Color(std::int32_t x, std::int32_t y) const {
+		return colors[y*width+ x];
+	}
+	float& Depth(std::int32_t x, std::int32_t y, std::int32_t s) {
+		return depths[y*width+ x];
+	}
+	float const& Depth(std::int32_t x, std::int32_t y) const {
+		return depths[y*width+ x];
+	}
+
+    //Write depth values to output stream in PPM format
+    void WriteDepthsPPM(std::ofstream& out) {
+        out<<"P3\n"<<height<<" "<<width<<"\n255\n"; 
+        for(const auto& pixel : depths) {
             out<<pixel<<'\n';
         }
     }
 
-    //Iterators
-    auto begin() { return data_.begin(); }
-    auto end() { return data_.end(); }
-    auto begin() const { return data_.begin(); }
-    auto end() const { return data_.end(); }
-    auto cbegin() const { return data_.cbegin(); }
-    auto cend() const { return data_.cend(); }
+    //Write color values to output stream in PPM format
+    void WriteColorsPPM(std::ofstream& out) { 
+        out<<"P3\n"<<height<<" "<<width<<"\n255\n"; 
+        for(const auto& [r,g,b] : colors) {
+            out<< static_cast<int>(255.999*r)<< " "<< static_cast<int>(255.999*g)<<" "<<static_cast<int>(255.999*b)<<'\n'; //Scale and write to file
+            }
+    }
+
+
+
+public:
+    std::int32_t height;
+    std::int32_t width;
+    std::vector<Color3f> colors;
+    std::vector<float>   depths;
 };
+
