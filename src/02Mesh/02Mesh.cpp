@@ -8,96 +8,70 @@
 #include <optional>
 #include <span>
 #include <vector>
+#include <random>
 
 #include "cura/buffer.h"
 #include "cura/camera.h"
-#include "cura/mat.h"
 #include "cura/math.h"
 #include "cura/model.h"
-#include "cura/normal_map_shader.h"
-#include "cura/pipeline.h"
 #include "cura/rasterizer.h"
-#include "cura/shader.h"
-#include "cura/texture.h"
-#include "cura/transforms.h"
-#include "cura/triangle.h"
-#include "cura/vec.h"
 
-/*
-OVERVIEW
-for(const auto& entity: Scene) {
-    std::vector<std::array<int,2> PixCoords = Project(entity);
-    Rasterise(entity);
-    Shade(entity, shading_model);
-}
-*/
-
-//A vertex consists of a geometric position and a color
-struct Vrtx {
-    Vec2f pixel_coords;
-    Color3f  col;
-};
-
-
-//Checks whether a pixel coordinate is occupied by a triangle
-//If true, returns the barycentric coordinates at the pixel location
-std::optional<std::array<float,3>> Opt_InTriangle(const Vec2f& p, const std::array<Vrtx, 3>& t) {
-    const auto& [v0,v1,v2] = t; //Unpack vertices of triangle
-    float w0 = EdgeFunction(v1.pixel_coords, v2.pixel_coords, p); // signed area of the triangle v1v2p multiplied by 2
-    float w1 = EdgeFunction(v2.pixel_coords, v0.pixel_coords, p); // signed area of the triangle v2v0p multiplied by 2
-    float w2 = EdgeFunction(v0.pixel_coords, v1.pixel_coords, p); // signed area of the triangle v0v1p multiplied by 2
-
-    // Check if the pixel lies inside the triangle
-    if (w0 >= 0 && w1 >= 0 && w2 >= 0) {
-        float area = EdgeFunction(v0.pixel_coords, v1.pixel_coords, v2.pixel_coords); // The edge function with a triangles vertices as its arguments results in twice the area of triangle
-        // Compute barycentric coordinates
-        w0 /= area;
-        w1 /= area;
-        w2 /= area;
-        return std::array{w0,w1,w2};
-    }
-    return std::nullopt;
-}
+#include <linalg.h>
 
 
 
-//Determines visibility of a triangle and colors it using interpolation
-void RasteriseAndColor(const std::array<Vrtx, 3>& t, Buffer<Color3f>& image) {
-    for(int y =0; y < image.Height(); ++y ) {
-        for(int x = 0; x<image.Width(); ++x) {
-            auto p = Vec2f(x,y); //TODO move p to centre of pixel?
-            // Check if the pixel lies inside the triangle
-            if (auto bary_coords = Opt_InTriangle(p,t); bary_coords) {
-                const auto& [w0,w1,w2] = bary_coords.value(); //unpack barycentric coordinates
-                const auto& [v0,v1,v2] = t; //Unpack vertices of triangle
-                
-                //For all per-vertex attributes, we can now interpolate using barycentric coords (just color for now)
-                //For example, the red component at pixel p is the weighted sum of the red components of t, weighted by barycentric coords
-                //Note that v0.col is the RGB color of the 1st vertex of the triangle 
-                //THIS IS CALLED GOURAD INTERPOLATION
-                const auto r = w0*v0.col.R() + w1*v1.col.R() + w2*v2.col.R();
-                const auto g = w0*v0.col.G() + w1*v1.col.G() + w2*v2.col.G();
-                const auto b = w0*v0.col.B() + w1*v1.col.B() + w2*v2.col.B();
-                auto col = Color3f{r,g,b};
-                image.Set(x,y,col);
+void DrawTriangle(const Vec2f& v0,const Vec2f& v1,const Vec2f& v2, FrameBuffer& image) {
+
+    Color3f triangleCol = Color3f(
+                    static_cast <float> (rand()) / static_cast <float> (RAND_MAX),
+                    static_cast <float> (rand()) / static_cast <float> (RAND_MAX),
+                    static_cast <float> (rand()) / static_cast <float> (RAND_MAX));
+
+    //Determine bounding box of triangle
+    std::int32_t minX = std::min({v0.x,v1.x, v2.x}); 
+    std::int32_t maxX = std::max({v0.x,v1.x, v2.x}); 
+
+    std::int32_t minY = std::min({v0.y,v1.y, v2.y}); 
+    std::int32_t maxY = std::max({v0.y,v1.y, v2.y}); 
+
+    // Dont need to draw anything outside screen bounds
+    minX = std::max(minX, 0);
+    minY = std::max(minY,0);
+
+    maxX = std::min(maxX, image.width);
+    maxY = std::min(maxY, image.height);
+
+    static int r = 0;
+
+    for(auto y = minY; y <= maxY; ++y )
+    {
+        for(auto x = minX; x <= maxX; ++x) 
+        {
+            const auto p = Vec2f(x,y); //Current pixel being tested
+
+            const float w0 =  EdgeFunction(v1, v2, p); // signed area of the triangle v1v2p multiplied by 2
+            const float w1 =  EdgeFunction(v2, v0, p); // signed area of the triangle v2v0p multiplied by 2
+            const float w2 =  EdgeFunction(v0, v1, p); // signed area of the triangle v0v1p multiplied by 2
+
+            //Note that the comparitor (<= vs >=) depends on the winding order (CCW vs CW)!
+            if(w0<=0 && w1<=0 && w2<=0) 
+            {
+                image.Color(x,y) = triangleCol;
             }
         }
     }
 }
 
-
-#include <filesystem>
 int main() {
 
-	constexpr int height{800};
-	constexpr int width{800};
+	constexpr int kheight{800};
+	constexpr int kwidth{800};
 
-    constexpr auto white = Color3f{1.f,1.f,1.f};	
-	Buffer<Color3f> image{height,width, white};
+	FrameBuffer image{kheight,kwidth};
 	std::ofstream out_file{"/home/sc2046/Projects/Graphics/CuRa/scenes/02Mesh/face_mesh.ppm"};
 
 
-    Model head("assets/models/head.obj");
+    Model head("/home/sc2046/Projects/Graphics/CuRa/assets/models/head.obj");
 
     //Iterate over each face (triangle) in the model
     for(const auto& face : head.Faces()) {
@@ -109,21 +83,13 @@ int main() {
 
         //The positions are in 3D where each coord lies in [-1,1]
         //We need to extract the x and y coords and scale.
-        Vec2f p0{(v0.X()+1)*width/2.f, (-v0.Y()+1)*height/2.f};
-        Vec2f p1{(v1.X()+1)*width/2.f, (-v1.Y()+1)*height/2.f};
-        Vec2f p2{(v2.X()+1)*width/2.f, (-v2.Y()+1)*height/2.f};
+        Vec2f p0{(v0.x+1)*kwidth/2.f, (-v0.y+1)*kheight/2.f};
+        Vec2f p1{(v1.x+1)*kwidth/2.f, (-v1.y+1)*kheight/2.f};
+        Vec2f p2{(v2.x+1)*kwidth/2.f, (-v2.y+1)*kheight/2.f};
 
-        //Define some random color for each vertex
-        const auto col = Color3f{(float)rand() / (float)RAND_MAX,(float)rand() / (float)RAND_MAX,(float)rand() / (float)RAND_MAX} ;
-        const Vrtx a{p0,col};
-        const Vrtx b{p1,col};
-        const Vrtx c{p2,col};
-
-        const std::array<Vrtx, 3> triangle{a,b,c};
-
-        RasteriseAndColor(triangle, image);
+        DrawTriangle(p0,p1,p2, image);
     }
 
 	if(!out_file) {std::cerr<<"Error creating file\n"; return 1;};
-	image.Write(out_file);
+	image.WriteColorsPPM(out_file);
 }
