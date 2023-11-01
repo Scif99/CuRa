@@ -1,10 +1,11 @@
 #pragma once
 
 #include <string_view>
-#include "buffer.h"
+
+#include <cura/buffer.h>
 
 //TODO Better error handling (exceptions?)
-Buffer<Color3f> ParsePPMTexture(std::string_view filename) {
+FrameBuffer ParsePPMTexture(std::string_view filename) {
     //#1 
     if(!filename.ends_with(".ppm")) {
         std::cerr<<"incorrect file format\n";
@@ -35,7 +36,7 @@ Buffer<Color3f> ParsePPMTexture(std::string_view filename) {
     }
 
     //Now that we know the dimensions, we can create a buffer to extract the data into
-    Buffer<Color3f> buffer(height,width);
+    FrameBuffer buffer(height,width);
 
     //Now we read in three values at a time, r,g,b.
     //Scale the values to the range [0,1]
@@ -43,7 +44,7 @@ Buffer<Color3f> ParsePPMTexture(std::string_view filename) {
     int idx = 0;
     while(file>>r>>g>>b) {
         Color3f col{std::stof(r)/255.f,std::stof(g)/255.f,std::stof(b)/255.f};
-        buffer[idx++] = col;
+        buffer.colors[idx++] = col;
     }
     return buffer;
 };

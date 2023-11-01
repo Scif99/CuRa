@@ -33,6 +33,8 @@ list(
   include/cura/transforms.h
   include/cura/triangle.h
   include/cura/vertex.h
+  include/cura/pipeline.h
+
 
   #source files
   #02
@@ -42,7 +44,7 @@ list(
 add_library(cura_lib OBJECT ${cura_lib_SOURCES})
 
 
-# Link dependencies
+# Link dependencies to library
 target_link_libraries(
   cura_lib
   PRIVATE ${CURA_PRIVATE_LIBS}
@@ -59,14 +61,14 @@ target_include_directories(
 # Add executables and link with cura_lib
 # ============================================================================
 
-#add_executable(assignment01 src/01Triangle/01Triangle.cpp)
-add_executable(assignment01 src/01Triangle/01Triangle.cpp)
-
+add_executable(assignment01 src/01Triangle/01triangle.cpp)
 target_link_libraries(assignment01 PRIVATE cura_lib)
 
-
-add_executable(assignment02 src/02Mesh/02Mesh.cpp)
+add_executable(assignment02 src/02MeshParsing/02mesh_parsing.cpp)
 target_link_libraries(assignment02 PRIVATE cura_lib)
+
+add_executable(assignment03 src/03BarycentricInterpolation/03barycentric_interpolation.cpp)
+target_link_libraries(assignment03 PRIVATE cura_lib)
 
 add_executable(part1 src/main.cpp)
 target_link_libraries(part1 PRIVATE cura_lib)
