@@ -1,9 +1,10 @@
 #pragma once
 
 #include <cassert>
-#include <fstream>
-#include <vector>
 #include <cstdint>
+#include <fstream>
+#include <numeric>
+#include <vector>
 
 #include <cura/math.h>
 
@@ -18,8 +19,8 @@ public:
         {
             assert(h%2==0 && w%2==0 &&"Error: Framebuffer dimensions must be even!");
 
-            colors.resize(h*w);
-            depths.resize(h*w);
+            colors.resize(h*w, Color3f(0.f,0.f,0.f));
+            depths.resize(h*w, -std::numeric_limits<float>::infinity());
         }
 
     // helpers that look up colors and depths for sample s of pixel (x,y):

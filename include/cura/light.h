@@ -1,6 +1,6 @@
 #pragma once
 
-#include <cura/vec.h>
+#include <cura/math.h>
 
 struct DistantLight {
     Norm3f Direction;

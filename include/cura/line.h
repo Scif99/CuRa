@@ -2,8 +2,6 @@
 
 #include <cura/buffer.h>
 #include <cura/math.h>
-#include <cura/vec.h>
-
 
 /// @brief Evaluates the implicit equation of a line at a particular point.
 /// @brief The point lies on the line if the return value is zero.

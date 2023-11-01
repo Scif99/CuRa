@@ -55,13 +55,13 @@ void DrawTriangle(const ClippedVertex& cv0,const ClippedVertex& cv1,const Clippe
                 const auto& [l0,l1,l2] = bary_coords.value(); //unpack barycentric coordinates
                 
                 //Interpolate depth (first so we can discard early if necessary)
-                float d  = l0*cv0.pixel_coords.z + l1*cv1.pixel_coords.z + l2*cv2.pixel_coords.z;
+                const float d  = l0*cv0.pixel_coords.z + l1*cv1.pixel_coords.z + l2*cv2.pixel_coords.z;
                 if(d<image.Depth(x,y)) continue;
                 image.Depth(x,y) = d;
- 
+                
                 //Interpolate textures
                 Vec2f tex_coords = l0*cv0.tex_coords + l1*cv1.tex_coords + l2*cv2.tex_coords;
-                image.Color(x,y) = TextureLookup(texture,tex_coords.x,tex_coords.y);
+                image.Color(x,y) =  TextureLookup(texture,tex_coords.x,tex_coords.y);
             }
         }
     }

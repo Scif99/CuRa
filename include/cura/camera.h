@@ -1,6 +1,6 @@
 #pragma once
 
-#include <cura/vec.h>
+#include <cura/math.h>
 
 struct Camera{
     Camera(const Vec3f& e, const Vec3f& c, const Vec3f& u)

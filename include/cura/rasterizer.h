@@ -1,14 +1,8 @@
 #pragma once
 
-#include <array>
 #include <optional>
-#include <unordered_map>
-#include <vector>
 
 #include <cura/math.h>
-#include <cura/vertex.h>
-
-
 
 /// @brief      Determines whether a point lies clockwise or anti-clockwise to a vector. 
 /// @param tail Tail of the edge vector (i.e where the vector 'begins').

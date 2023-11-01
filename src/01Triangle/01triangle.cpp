@@ -3,9 +3,6 @@
 #include <cura/buffer.h>
 #include <cura/math.h>
 
-
-constexpr float WindingCoeff = -1.f; 
-
 [[nodiscard]] float EdgeFunction(const Vec2f& vfrom, const Vec2f& vto, const Vec2f& p) {
 
     assert(vfrom!=vto);
