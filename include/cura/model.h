@@ -8,7 +8,7 @@
 #include <string_view>
 #include <vector>
 
-#include "vec.h"
+#include <cura/math.h>
 
 /// @brief Splits a line into words by a specified delimiter
 /// @param line String to be split

@@ -29,7 +29,7 @@ public:
 	Color3f const& Color(std::int32_t x, std::int32_t y) const {
 		return colors[y*width+ x];
 	}
-	float& Depth(std::int32_t x, std::int32_t y, std::int32_t s) {
+	float& Depth(std::int32_t x, std::int32_t y) {
 		return depths[y*width+ x];
 	}
 	float const& Depth(std::int32_t x, std::int32_t y) const {

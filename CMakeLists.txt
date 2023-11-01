@@ -26,14 +26,11 @@ list(
   include/cura/math.h
   include/cura/model.h
   include/cura/normal_map_shader.h
-  include/cura/quad_shader.h
   include/cura/rasterizer.h
   include/cura/shader.h
   include/cura/texture.h
   include/cura/transforms.h
-  include/cura/triangle.h
   include/cura/vertex.h
-  include/cura/pipeline.h
 
 
   #source files
@@ -69,6 +66,3 @@ target_link_libraries(assignment02 PRIVATE cura_lib)
 
 add_executable(assignment03 src/03BarycentricInterpolation/03barycentric_interpolation.cpp)
 target_link_libraries(assignment03 PRIVATE cura_lib)
-
-add_executable(part1 src/main.cpp)
-target_link_libraries(part1 PRIVATE cura_lib)
