@@ -20,7 +20,6 @@ using Vec3i   = la::vec<std::int32_t,3>;
 using Vec3u   = la::vec<std::uint32_t,3>;
 
 using Color3f = Vec3f;
-using Color3d = Vec3d;
 using Color3u = Vec3u;
 
 

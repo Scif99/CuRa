@@ -55,6 +55,7 @@ void DrawTriangle(const Vec2f& v0,const Vec2f& v1,const Vec2f& v2, FrameBuffer& 
     }
 }
 
+//Parse a mesh into triangles, and draw them. 
 int main() {
 
 	constexpr int kheight{800};

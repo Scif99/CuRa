@@ -2,93 +2,98 @@
 
 #include <array>
 #include <optional>
+#include <unordered_map>
+#include <vector>
 
-#include "triangle.h"
-#include "vec.h"
+#include <cura/math.h>
+#include <cura/vertex.h>
 
 
 
-/// @brief  Determines whether a point lies to the 'left' or 'right' of a line. Note all vectors are assumed to be in pixel (screen) space with a top-left origin.
+/// @brief      Determines whether a point lies clockwise or anti-clockwise to a vector. 
 /// @param tail Tail of the edge vector (i.e where the vector 'begins').
 /// @param head Head of the edge vector (i.e. where the vector 'ends').
 /// @param p    Point to be tested.
 /// @return     Signed area of the parallelogram defined by the edge and the point. 
-///             If the value is positive, then the point lies to the left of the line.
-///             If the value is negative, then the point lies to the right of the line.
+///             If the value is positive, then the point lies clockwise to the line.
+///             If the value is negative, then the point lies anti-clockwise to the line.
 ///             If the value is zero, then the point lies on the line.
-///             The value is used to compute barycentric coordinates
-[[nodiscard]] float EdgeFunction(const Vec2f& vtail, const Vec2f& vhead, const Vec2f& p) {
+///             The value is used to compute barycentric coordinates.
+[[nodiscard]] float EdgeFunction(const Vec2f& vfrom, const Vec2f& vto, const Vec2f& p) {
 
-    assert(vtail!=vhead);
-
-    const auto b = vhead - vtail; //Vector from start of edge to point  
-    const auto a = p - vtail; //Vector representing (ccw) edge of triangle
-    //return a x b
-    return a.X()*b.Y() - a.Y()*b.X();
+    assert(vfrom!=vto);
+    return la::cross(vto - vfrom, p - vfrom);    
 }
 
 
-//Checks whether a pixel coordinate is occupied by a triangle
-//If true, returns the barycentric coordinates at the pixel location
-[[nodiscard]] std::optional<std::array<float,3>> Opt_InTriangle(const Vec2f& p, const Triangle& t) {
-
-    //Extract 2D screen coordinates of each vertex
-    const auto v0 = Vec2f(t.vertices[0].coords.X(),t.vertices[0].coords.Y());
-    const auto v1 = Vec2f(t.vertices[1].coords.X(),t.vertices[1].coords.Y());
-    const auto v2 = Vec2f(t.vertices[2].coords.X(),t.vertices[2].coords.Y());
-
-    auto l0{EdgeFunction(v1, v2, p)}; // signed area of the triangle v1v2p multiplied by 2
-    auto l1{EdgeFunction(v2, v0, p)}; // signed area of the triangle v2v0p multiplied by 2
-    auto l2{EdgeFunction(v0, v1, p)}; // signed area of the triangle v0v1p multiplied by 2
+/// @brief Computes the barycentric coordinates of a point w.r.t. to a triangle, if possible. 
+/// @param v0 First vertex of the triangle (in CCW).
+/// @param v1 Second vertex of the triangle (in CCW).
+/// @param v2 Third vertex of the triangle (in CCW).
+/// @param p  Point to be tested.
+/// @return   If the point lies inside the triangle contains the barycentric coordinates of the point. Otherwise is null.
+[[nodiscard]] std::optional<Vec3f> oBarycentrics(const Vec2f& v0, const Vec2f& v1, const Vec2f& v2, const Vec2f& p) {
+    
+    auto w0{EdgeFunction(v1, v2, p)}; // signed area of the triangle v1v2p multiplied by 2
+    auto w1{EdgeFunction(v2, v0, p)}; // signed area of the triangle v2v0p multiplied by 2
+    auto w2{EdgeFunction(v0, v1, p)}; // signed area of the triangle v0v1p multiplied by 2
 
     // Check if the pixel lies inside the triangle
-    //In the CCW winding case, this occurs is all signs are -ve
-    if (l0 >= 0 && l1 >= 0 && l2 >= 0) {
+    //In the CCW winding case, this means the point should lie anti-clockwise to all directional edges of the triangle 
+    if (w0 <= 0 && w1 <= 0 && w2 <= 0) {
          // The edge function with a triangles vertices as its arguments results in twice the area of triangle
-        const auto area = float{EdgeFunction(v0, v1, v2)};
+        const auto area{EdgeFunction(v0, v1, v2)};
+        
         // Compute barycentric coordinates
-        l0 /= area;
-        l1 /= area;
-        l2 /= area;
-        return std::array{l0,l1,l2};
+        w0 /= area;
+        w1 /= area;
+        w2 /= area;
+        return Vec3f{w0,w1,w2};
     }
     return std::nullopt;
 }
 
+// Determines visibility of a triangle
+// In terms of the pipeline, rakes a triangle primitive and breaks it down into fragments
+// Interpolates any per-vertex attributes to get a value for the fragment
+//  void Rasterise(const Vec2f& v0, const Vec2f& v1, const Vec2f& v2 , FrameBuffer& buffer) {
+    
+//     //assert(attribs.contains("Depth"))
+    
+//     std::vector<Fragment> triangle_frags; //The fragments that make up the triangle
+
+//     //Determine bounding box of triangle
+//     int minX = std::min({v0.x,v1.x, v2.x}); 
+//     int maxX = std::max({v0.x,v1.x, v2.x}); 
+//     int minY = std::min({v0.y,v1.y, v2.y}); 
+//     int maxY = std::max({v0.y,v1.y, v2.y}); 
+
+//     // Dont need to draw anything outside screen bounds
+//     minX = std::max(minX, 0);
+//     minY = std::max(minY,0);
+//     maxX = std::min(maxX, buffer.width);
+//     maxY = std::min(maxY, buffer.height);
+
+//     for(int y = minY; y <= maxY; ++y ) {
+//         for(int x = minX;  x <= maxX; ++x) {
+//             const auto p = Vec2f(x,y);
+//             // Check if the pixel lies inside the triangle
+//             if (auto bary_coords = oBarycentrics(v0,v1,v2,p); bary_coords) {
+//                 const auto& [l0,l1,l2] = bary_coords.value(); //unpack barycentric coordinates
+
+//                 //Interpolate all per-vertex attributes
+//                 for(const auto& att) {
+
+//                     buffer.Color(x,y) = att->BaryInterp(l0,l1,l2);
+//                 }
+//             }
+//         }
+//     }
+//     //return triangle_frags;
+// }
 
 
-
-//Determines visibility of a triangle
-//In terms of the pipeline, rakes a triangle primitive and breaks it down into fragments
-//Interpolates any per-vertex attributes to get a value for the fragment
-[[nodiscard]] std::vector<Fragment> Rasterise(const Triangle& triangle, const Buffer<Color3f>& image_buf) {
-    std::vector<Fragment> triangle_frags; //The fragments that make up the triangle
-
-    //Get bounding values
-    const int min_x = std::min({triangle.vertices[0].coords.X(),triangle.vertices[1].coords.X(),triangle.vertices[2].coords.X()});
-    const int max_x = std::max({triangle.vertices[0].coords.X(),triangle.vertices[1].coords.X(),triangle.vertices[2].coords.X()});
-
-    const int min_y = std::min({triangle.vertices[0].coords.Y(),triangle.vertices[1].coords.Y(),triangle.vertices[2].coords.Y()});
-    const int max_y = std::max({triangle.vertices[0].coords.Y(),triangle.vertices[1].coords.Y(),triangle.vertices[2].coords.Y()});
-
-    for(int y = min_y; y <= max_y; ++y ) {
-        for(int x = min_x;  x <= max_x; ++x) {
-            // Check if the pixel lies inside the triangle
-            if (auto bary_coords = Opt_InTriangle(Point2f(x,y),triangle); bary_coords) {
-                const auto& [l0,l1,l2] = bary_coords.value(); //unpack barycentric coordinates
-                const auto& [v0,v1,v2] = triangle.vertices; //Unpack vertices of triangle
-
-                //Interpolate all per-vertex attributes
-                const float frag_depth = l0*v0.coords.Z() + l1*v1.coords.Z() + l2*v2.coords.Z(); //Required
-
-                Fragment frag;
-                frag.window_coords = Vec3f(x,y,frag_depth);
-                frag.tex_coords = l0*v0.tex_coords + l1*v1.tex_coords + l2*v2.tex_coords;
-                frag.normal = l0*v0.world_norm + l1*v1.world_norm + l2*v2.world_norm;         
-
-                triangle_frags.push_back(frag);
-            }
-        }
-    }
-    return triangle_frags;
-}
+//TODO
+// bool IsFrontFacing(const Vec2f& v0, const Vec2f& v1, const Vec3f& v2, bool CCWWinding = true) {
+//     return true;
+// }

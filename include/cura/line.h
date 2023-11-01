@@ -2,7 +2,7 @@
 
 #include <cura/buffer.h>
 #include <cura/math.h>
-#include <cura/vec.h>
+#include <linalg.h>
 
 
 /// @brief Evaluates the implicit equation of a line at a particular point.

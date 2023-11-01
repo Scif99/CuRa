@@ -26,7 +26,6 @@ list(
   include/cura/math.h
   include/cura/model.h
   include/cura/normal_map_shader.h
-  include/cura/quad_shader.h
   include/cura/rasterizer.h
   include/cura/shader.h
   include/cura/texture.h

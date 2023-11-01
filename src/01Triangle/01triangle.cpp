@@ -3,9 +3,6 @@
 #include <cura/buffer.h>
 #include <cura/math.h>
 
-
-constexpr float WindingCoeff = -1.f; 
-
 [[nodiscard]] float EdgeFunction(const Vec2f& vfrom, const Vec2f& vto, const Vec2f& p) {
 
     assert(vfrom!=vto);
@@ -55,7 +52,7 @@ void DrawTriangle(const Vec2f& v0,const Vec2f& v1,const Vec2f& v2, FrameBuffer& 
 }
 
 
-
+//Draws a single triangle.
 int main() {
 
 	constexpr int kheight{800};
