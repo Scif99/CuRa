@@ -12,3 +12,6 @@ TODO
 
 - Parallelise
     - Get rid of triangle struct
+
+    something
+    
