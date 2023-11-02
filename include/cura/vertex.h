@@ -8,13 +8,13 @@
 #include <variant>
 
 
-//Processed by the vertex shader.
-//Contains per-vertex attributes.
-// struct Vertex {
-//     Vec3f Position;
-//     Vec3f Normal;
-//     Vec2f TexCoord; 
-// };
+// Input to the pipeline.
+// Is Processed by the vertex shader.
+// Contains per-vertex attributes.
+struct Vertex {
+    Vec3f Position;
+    Vec2f TexCoord; 
+};
 
 //Produced by the vertex shader.
 //Is returned form the vertex shader.

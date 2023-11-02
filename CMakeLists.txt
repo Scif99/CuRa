@@ -24,6 +24,9 @@ list(
   include/cura/light.h
   include/cura/line.h
   include/cura/math.h
+
+
+
   include/cura/model.h
   include/cura/normal_map_shader.h
   include/cura/rasterizer.h
@@ -58,11 +61,9 @@ target_include_directories(
 # Add executables and link with cura_lib
 # ============================================================================
 
-add_executable(assignment01 src/01Triangle/01triangle.cpp)
-target_link_libraries(assignment01 PRIVATE cura_lib)
-
-add_executable(assignment02 src/02MeshParsing/02mesh_parsing.cpp)
-target_link_libraries(assignment02 PRIVATE cura_lib)
-
 add_executable(assignment03 src/03BarycentricInterpolation/03barycentric_interpolation.cpp)
 target_link_libraries(assignment03 PRIVATE cura_lib)
+
+
+add_executable(assignment04 src/04Transforms/04transformed_mesh.cpp)
+target_link_libraries(assignment04 PRIVATE cura_lib)

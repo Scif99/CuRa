@@ -13,7 +13,6 @@
 #include "cura/camera.h"
 #include "cura/light.h"
 #include "cura/line.h"
-#include "cura/mat.h"
 #include "cura/math.h"
 #include "cura/model.h"
 #include "cura/normal_map_shader.h"
@@ -22,8 +21,6 @@
 #include "cura/shader.h"
 #include "cura/texture.h"
 #include "cura/transforms.h"
-#include "cura/triangle.h"
-#include "cura/vec.h"
 
 std::optional<Triangle> Clipped(const Triangle& triangle) {return triangle;}
 

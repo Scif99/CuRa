@@ -5,6 +5,7 @@
 #include <cura/math.h>
 #include <cura/model.h>
 #include <cura/rasterizer.h>
+#include <cura/transforms.h>
 #include <cura/texture.h>
 #include <cura/vertex.h>
 
@@ -23,7 +24,6 @@ static Color3f TextureLookup( const FrameBuffer& texture, float u, float v, bool
 
 //Similar to the previous iteration, except we now use the barycentric coordinates computed by the edge function to interpolate attributes over vertices
 //In this case the attributes are depth and texture coordinates.
-//Note that although there is no mention of any transforms, we are implicitly performing an orthographic projection by simply ignoring the clip-space z-coordinate
 void DrawTriangle(const ClippedVertex& cv0,const ClippedVertex& cv1,const ClippedVertex& cv2, FrameBuffer& image, const FrameBuffer& texture) {
 
     const auto v0 = cv0.pixel_coords;
@@ -81,12 +81,14 @@ int main() {
     const Model head("/home/sc2046/Projects/Graphics/CuRa/assets/models/head.obj");
     const FrameBuffer diffuse_map =  ParsePPMTexture("/home/sc2046/Projects/Graphics/CuRa/assets/textures/head_diffuse.ppm");
 
+
     //Iterate over each face (triangle) in the model
     for(const auto& face : head.Faces()) {
 
-        std::array<ClippedVertex,3> cvertices;
+        std::array<Vertex,3> vertices;
 
         for(int i =0;i<3;++i) {
+
             const auto clippos = head.Vertices()[face.pos_idx[i]]; //position of the vertex in clip space
             Vec3f viewpos{(clippos.x+1)*kwidth/2.f, (-clippos.y+1)*kheight/2.f, clippos.z}; //position of vertex in viewport space (i.e pixel coords)
 
@@ -100,3 +102,6 @@ int main() {
 	if(!out_file) {std::cerr<<"Error creating file\n"; return 1;};
 	image.WriteColorsPPM(out_file);
 }
+
+
+//Get a list of 
