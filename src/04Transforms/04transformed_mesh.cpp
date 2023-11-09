@@ -41,10 +41,8 @@ void DrawTriangle(const ClippedVertex& cv0,const ClippedVertex& cv1,const Clippe
     minX = std::max(minX, 0);
     minY = std::max(minY,0);
 
-    maxX = std::min(maxX, image.width);
-    maxY = std::min(maxY, image.height);
-
-    static int r = 0;
+    maxX = std::min(maxX, image.width-1);
+    maxY = std::min(maxY, image.height-1);
 
     for(auto y = minY; y <= maxY; ++y )
     {
@@ -57,51 +55,76 @@ void DrawTriangle(const ClippedVertex& cv0,const ClippedVertex& cv1,const Clippe
                 
                 //Interpolate depth (first so we can discard early if necessary)
                 const float d  = l0*cv0.pixel_coords.z + l1*cv1.pixel_coords.z + l2*cv2.pixel_coords.z;
+                
+
+                //Early depth testing
                 if(d<image.Depth(x,y)) continue;
                 image.Depth(x,y) = d;
                 
                 //Interpolate textures
                 Vec2f tex_coords = l0*cv0.tex_coords + l1*cv1.tex_coords + l2*cv2.tex_coords;
+                
                 image.Color(x,y) =  TextureLookup(texture,tex_coords.x,tex_coords.y);
             }
         }
     }
 }
 
+
+
+
 //Draw a mesh using a texture for coloring.
 int main() {
 
 	constexpr int kheight{800};
 	constexpr int kwidth{800};
-
+    constexpr float kaspect_ratio{static_cast<float>(kwidth)/ static_cast<float>(kheight)};
+    
 	FrameBuffer image{kheight,kwidth};
-	std::ofstream out_file{"/home/sc2046/Projects/Graphics/CuRa/scenes/03BarycentricInterpolation/textured_mesh.ppm"};
+	std::ofstream out_file{"/home/sc2046/Projects/Graphics/CuRa/scenes/04Transforms/orthographic.ppm"};
 
-
+    //Load model and the associated texture(s).
     const Model head("/home/sc2046/Projects/Graphics/CuRa/assets/models/head.obj");
     const FrameBuffer diffuse_map =  ParsePPMTexture("/home/sc2046/Projects/Graphics/CuRa/assets/textures/head_diffuse.ppm");
-
 
     //Iterate over each face (triangle) in the model
     for(const auto& face : head.Faces()) {
 
-        std::array<Vertex,3> vertices;
+        std::array<ClippedVertex,3> clippedvertices;
 
         for(int i =0;i<3;++i) {
 
-            const auto clippos = head.Vertices()[face.pos_idx[i]]; //position of the vertex in clip space
-            Vec3f viewpos{(clippos.x+1)*kwidth/2.f, (-clippos.y+1)*kheight/2.f, clippos.z}; //position of vertex in viewport space (i.e pixel coords)
+            //Get position of vertex in 3D world space and convert to homogeneous coordinates.
+            const auto worldpos = head.Vertices()[face.pos_idx[i]]; 
+            const auto hworldpos = Vec4f(worldpos,1.f);
 
+            //Transform to camera space by applying view matrix.
+            const auto lookat = LookAt({0.f,0.f,3.f}, {0.f,0.f,0.f}, {0.f,1.f,0.f});
+            const auto hcamerapos = la::mul(lookat, hworldpos);
+
+            //Transform to clip space by applying projection matrix.
+            //const auto projection_matrix = OrthographicProjection(-1.f,1.f,-1.f,1.f,-1.f,-5.f);
+            const auto projection_matrix = PerspectiveProjection(std::numbers::pi_v<float>/4.f, kaspect_ratio,-1.f,-5.f);
+            
+            const auto hclipspacepos = la::mul(projection_matrix,hcamerapos);
+
+            //Clipping (ignored)
+
+            //Transform to NDC by applying perspective divide. (Note this does nothing for an orthographic projection).
+            const auto ndcpos = hclipspacepos.xyz() / hclipspacepos.w;
+
+            //Transform to screen space by applying viewport transformation.
+            //Keep the z coordinate for depth testing.
+            const auto viewpos = Vec3f{(ndcpos.x+1)*kwidth/2.f, (-ndcpos.y+1)*kheight/2.f, ndcpos.z};
+            //Also get other attributes from the model...
             const auto texcoord = head.TexCoords()[face.tex_idx[i]];
 
-            cvertices[i] = ClippedVertex{viewpos, texcoord};
+            clippedvertices[i] = ClippedVertex{viewpos, texcoord};
         }
-        DrawTriangle(cvertices[0],cvertices[1],cvertices[2], image, diffuse_map);
+        //Rasterise & color
+        DrawTriangle(clippedvertices[0],clippedvertices[1],clippedvertices[2], image, diffuse_map);
     }
 
 	if(!out_file) {std::cerr<<"Error creating file\n"; return 1;};
 	image.WriteColorsPPM(out_file);
 }
-
-
-//Get a list of 

@@ -8,67 +8,74 @@
 
 /// @brief Builds a view matrix.
 /// @brief This matrix transforms vectors from the standard basis to the camera basis.
-/// @brief By convention, the camera will be facing in the -z direction
-/// @param eye Position of the camera
-/// @param center Direction in which the camera is facing
-/// @param up Defines the orientation of the camera
+/// @brief By convention, the 'forward' direction in camera space is aligned with the -z direction.
+/// @param eye Position of the camera in world spaces.
+/// @param center Direction in which the camera is facing in world space.
+/// @param up Defines the orientation of the camera.
 /// @return View matrix
-[[nodiscard]] Mat44f LookAt(const Vec3f& eye, const Vec3f& center, const Vec3f& up) {
+[[nodiscard]] inline Mat44f LookAt(const Vec3f& eye, const Vec3f& center, const Vec3f& up) {
     //Construct an orthonormal basis
-    const auto w = la::normalize(Vec3f{eye - center}); //'forward' axis. By convention, the camera should be facing in the -z direction
-    const auto u = la::normalize(Vec3f{la::cross<float>(up,w)}); //'right' axis
-    const auto v = la::normalize(la::cross<float>(w,u)); //'up' axis
-        
-    //The goal of the view matrix is to transform from our standard basis to the camera basis
-    //NOTE: Don't forget the translation.
-    //Therefore the view matrix is just the inverse of the transformation matrix from the standard basis to our camera basis.
-    //To avoid inverting any matrices, note that the inverse is equivalent to composing the inverse translation with the inverse transformation matrix, which is orthogonal.
-    
-    //Define the inverse transformation matrix
-    //It is the transpose of the transformation matrix
-    Mat44f change_basis {
-        {u[0],v[0],w[0],0.f},
-        {u[1],v[1],w[2],0.f},
-        {u[2],v[2],w[2],0.f},
-        {0.f ,0.f ,0.f ,1.f}
+    const auto v = la::normalize(eye - center); //'forward' axis. By convention, the camera should be facing in the -z direction
+    const auto r = la::normalize(la::cross(up,v)); //'right' axis
+    const auto u = la::normalize(la::cross(v,r)); //'up' axis
+
+    //To understand how the matrix is constructed, note that is a composition of the following transforms:
+    //Translate everything such that the camera lies at the origin
+    //Apply the change-of-basis matrix.
+    return Mat44f{
+        {r.x,    u.x,    v.x,     0.f},
+        {r.y,    u.y,    v.y,     0.f},
+        {r.z,    u.z,    v.z,     0.f},
+        {-eye.x ,-eye.y ,-eye.z  ,1.f}
     };
 
-    //The inverse of the matrix that translates the standard origin to the camera origin
-    //This is equivalent to a translation that reverses this movement
 
-    Mat44f translate {
-        {1.f     ,0.f     ,0.f      ,0.f},
-        {0.f     ,1.f     ,0.f      ,0.f},
-        {0.f     ,0.f     ,1.f      ,0.f},
-        {-eye[0] ,-eye[1] ,-eye[2]  ,1.f}
-    };
-
-    //The view matrix is the composition of these matrices
-    return la::mul(change_basis,translate);
 }
 
 
-// /// @brief Projects a point 
-// /// @brief Note the z coordinate of the original point is kept as the depth
-// /// @param coords Coordinates of the point to be projected (should be in camera space) 
-// /// @param eye 
-// /// @param center 
-// /// @param im_height 
-// /// @param im_width 
-// /// @param flip_y 
-// /// @return 3D vectors containing the coordinates of the projected point, along with the depth 
-// [[nodiscard]] Mat44f Projection(float n, float f, float l, float r, float b, float t) { 
+/// @brief Constructs an orthographic projection matrix
+/// @brief Assumes that the viewer oriented in a right-handed coordinate system, looking towards the -z direction, with the y axis pointing up. 
+/// @param l x-coordinate of left plane
+/// @param r x-coordinate of right plane
+/// @param b y-coordinate of bottom plane
+/// @param t y-coordinate of top plane
+/// @param n z-coordinate of near plane
+/// @param f z-coordinate of far plane (<n)
+/// @return Matrix representing the associated projection
+[[nodiscard]] inline Mat44f OrthographicProjection(float l, float r, float b, float t, float n, float f) {
+    
+    //Constructing the matrix can be understood by visualising what it does:
+    //First it translates the AABB defined by the bounds provided to the origin.
+    //Then it scales this AABB to the canonical view volume, such that the bounds in each dimension are [-1,1].
+    
+    return Mat44f{ 
+        {2.f/(r-l),     0.f,            0.f,           0.f},
+        {0.f,           2.f/(t-b),      0.f,           0.f},
+        {0.f,           0.f,            -2.f/(f-n),    0.f},
+        {-(r+l)/(r-l),  -(t+b)/(t-b),   -(f+n)/(f-n),  1.f}
+    };
+}
 
-//     assert(l<r && b<t && n > f);
-//     const std::array<float, 16> data = {
-//         2.f*n/(r-l), 0.f,         (l+r)/(l-r),  0.f,
-//         0.f,         2.f*n/(t-b), (b+t)/(b-t),  0.f,
-//         0.f,         0.f,         (f+n)/(n-f),  2.f* f *n/(f-n),
-//         0.f,         0.f,         1.f,         0.f
-//     };
-//     const Mat4f projection_mat(std::move(data));
-//     return projection_mat;
-// }
+
+
+/// @brief Constructs a perspective projection matrix
+/// @brief Assumes that the viewer oriented in a right-handed coordinate system, looking towards the -z direction, with the y axis pointing up. 
+/// @param vfov vertical field-of-view in radians
+/// @param near z-coordinate of near plane (< 0)
+/// @param far z-coordinate of far plane (< n)
+/// @return Matrix representing the associated projection
+[[nodiscard]] inline Mat44f  PerspectiveProjection(float vfov, float  aspect, float near, float far)
+{
+    //assert(0>n>f)
+    const float f = 1.f / std::tan(0.5f * vfov);
+    return Mat44f{
+        {f/aspect,     0.f,  0.f,                          0.f},
+        {0.f,          f,    0.f,                          0.f},
+        {0.f,          0.f,  -(far+near)/(far-near),      -1.f},
+        {0.f,          0.f,  -(2.f*far*near)/(far-near),   0.f}        
+        };
+}
+
 
 
 // /// @brief Applies the viewport transform 

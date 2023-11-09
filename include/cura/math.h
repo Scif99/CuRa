@@ -1,7 +1,9 @@
 #pragma once
 
+#include <numbers>
 
 #include <linalg.h>
+
 
 
 namespace la = linalg;
@@ -36,3 +38,6 @@ using Mat33f = la::mat<float,3,3>;
 using Mat33d = la::mat<double,3,3>;
 using Mat44f = la::mat<float,4,4>;
 using Mat44d = la::mat<double,4,4>;
+
+
+using Pixel = Vec2f;

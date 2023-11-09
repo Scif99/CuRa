@@ -55,7 +55,6 @@ public:
     const std::vector<Vec3f>& Vertices() const noexcept{return vertices_;};
     const std::vector<Vec2f>& TexCoords() const noexcept{return tex_coords_;}   
     const std::vector<Vec3f>& Normals() const noexcept{return normals_;};
-
     const std::vector<Face>& Faces() const noexcept{return faces_;}; //TODO switch to array?
 
 

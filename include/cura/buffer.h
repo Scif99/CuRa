@@ -20,20 +20,20 @@ public:
             assert(h%2==0 && w%2==0 &&"Error: Framebuffer dimensions must be even!");
 
             colors.resize(h*w, Color3f(0.f,0.f,0.f));
-            depths.resize(h*w, -std::numeric_limits<float>::infinity());
+            depths.resize(h*w, std::numeric_limits<float>::lowest());
         }
 
     // helpers that look up colors and depths for sample s of pixel (x,y):
 	Color3f& Color(std::int32_t x, std::int32_t y) {
 		return colors[y*width+ x];
 	}
-	Color3f const& Color(std::int32_t x, std::int32_t y) const {
+	const Color3f& Color(std::int32_t x, std::int32_t y) const {
 		return colors[y*width+ x];
 	}
 	float& Depth(std::int32_t x, std::int32_t y) {
 		return depths[y*width+ x];
 	}
-	float const& Depth(std::int32_t x, std::int32_t y) const {
+	const float& Depth(std::int32_t x, std::int32_t y) const {
 		return depths[y*width+ x];
 	}
 

@@ -4,13 +4,13 @@
 
 #include <cura/math.h>
 
-/// @brief      Determines whether a point lies clockwise or anti-clockwise to a vector. 
+/// @brief      Determines whether a point lies to the 'left' or 'right' of a vector, assuming you are oriented in the same direction as the vector. 
 /// @param tail Tail of the edge vector (i.e where the vector 'begins').
 /// @param head Head of the edge vector (i.e. where the vector 'ends').
 /// @param p    Point to be tested.
 /// @return     Signed area of the parallelogram defined by the edge and the point. 
-///             If the value is positive, then the point lies clockwise to the line.
-///             If the value is negative, then the point lies anti-clockwise to the line.
+///             If the value is positive, then the point lies to the left of the line.
+///             If the value is negative, then the point lies to the right of the line.
 ///             If the value is zero, then the point lies on the line.
 ///             The value is used to compute barycentric coordinates.
 [[nodiscard]] float EdgeFunction(const Vec2f& vfrom, const Vec2f& vto, const Vec2f& p) {
@@ -33,7 +33,8 @@
     auto w2{EdgeFunction(v0, v1, p)}; // signed area of the triangle v0v1p multiplied by 2
 
     // Check if the pixel lies inside the triangle
-    //In the CCW winding case, this means the point should lie anti-clockwise to all directional edges of the triangle 
+    //In the CCW winding case, this means the point should lie to the left all directional edges of the triangle 
+    //But because our coordinate system has a top-left origin, we reverse this.
     if (w0 <= 0 && w1 <= 0 && w2 <= 0) {
          // The edge function with a triangles vertices as its arguments results in twice the area of triangle
         const auto area{EdgeFunction(v0, v1, v2)};

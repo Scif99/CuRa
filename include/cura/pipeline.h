@@ -1,8 +1,20 @@
 
-class Pipeline {
+struct RenderPipeline {
+public:
+    /*
+    struct RenderProps
+    {
+        
+    }
+    
+    */
+
+public:
+
 
     //Run vertex shader
     /*
+        - Vertex shader should apply MVP transforms at minimum
         - Must return at least a clip-space position
     */
 
@@ -26,6 +38,11 @@ class Pipeline {
    //Rasterization
 
    //Fragment Shader
+public:
+    //Rasterizer
+    //VertexShader = default;
+    //FragmentShader = default;
+    //RenderProps m_props;
 
 
 };
