@@ -13,6 +13,7 @@
 
 #include "vertex.h"
 
+
 inline Color3f TextureLookup( const FrameBuffer& texture, float u, float v, bool flip_v = true) {
     assert(u>=0 && u<=1.f);
     assert(v>=0 && v<=1.f);
@@ -26,7 +27,7 @@ inline Color3f TextureLookup( const FrameBuffer& texture, float u, float v, bool
     return texture.Color(scaled_u,scaled_v);
 }
 
-// using Uniform = std::variant<float, Vec2f, Vec3f, Norm3f, Mat4f>; //Contains all the possible types of a uniform variable
+// using Uniform = std::variant<float, Vec2f, Vec3f, Vec4f, Mat44f>; //Contains all the possible types of a uniform variable
 
 // //A trait used to determine whether a type matches with at least one from some list of types
 // template<typename T, typename Args> struct is_one_of {};
