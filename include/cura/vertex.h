@@ -31,6 +31,7 @@ struct Vertex {
 struct ClippedVertex {
     Vec3f pixel_coords;
     Vec2f tex_coords;
+    float clip_z; //Necessary for perspective-correct interpolation
 };
 
 //Processed by the fragment shader.
