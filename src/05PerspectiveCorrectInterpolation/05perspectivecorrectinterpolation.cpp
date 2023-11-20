@@ -2,25 +2,15 @@
 #include <vector>
 
 #include <cura/buffer.h>
+#include <cura/camera.h>
 #include <cura/math.h>
 #include <cura/model.h>
 #include <cura/rasterizer.h>
 #include <cura/transforms.h>
 #include <cura/texture.h>
 #include <cura/vertex.h>
+#include <cura/shader.h>
 
-static Color3f TextureLookup( const FrameBuffer& texture, float u, float v, bool flip_v = true) {
-    assert(u>=0 && u<=1.f);
-    assert(v>=0 && v<=1.f);
-
-    //Also need to scale texture coordinates to the texture's dimensions
-    const auto tw{texture.width};
-    const auto th{texture.height}; 
-
-    const float scaled_u = u*tw;
-    const float scaled_v = flip_v ? th - v*th : v*th;
-    return texture.Color(scaled_u,scaled_v);
-}
 
 //Similar to the previous iteration, except we now use the barycentric coordinates computed by the edge function to interpolate attributes over vertices
 //In this case the attributes are depth and texture coordinates.
@@ -51,12 +41,10 @@ void DrawTriangle(const ClippedVertex& cv0,const ClippedVertex& cv1,const Clippe
             const auto p = Vec2f(x,y); //Current pixel being tested
 
             if (auto bary_coords = oBarycentrics(cv0.pixel_coords.xy(),cv1.pixel_coords.xy(),cv2.pixel_coords.xy(),p); bary_coords) {
-                const auto& [l0,l1,l2] = bary_coords.value(); //unpack barycentric coordinates
-                
-
+                const auto& [b0,b1,b2] = bary_coords.value(); //unpack barycentric coordinates
                 
                 //Interpolate depth (first so we can discard early if necessary)
-                const float d  = l0*cv0.pixel_coords.z + l1*cv1.pixel_coords.z + l2*cv2.pixel_coords.z;
+                const float d  = b0*cv0.pixel_coords.z + b1*cv1.pixel_coords.z + b2*cv2.pixel_coords.z;
                 
 
                 //Early depth testing
@@ -64,7 +52,7 @@ void DrawTriangle(const ClippedVertex& cv0,const ClippedVertex& cv1,const Clippe
                 image.Depth(x,y) = d;
                 
                 //Interpolate textures
-                Vec2f tex_coords = l0*cv0.tex_coords + l1*cv1.tex_coords + l2*cv2.tex_coords;
+                Vec2f tex_coords = b0*cv0.tex_coords + b1*cv1.tex_coords + b2*cv2.tex_coords;
                 
                 image.Color(x,y) =  TextureLookup(texture,tex_coords.x,tex_coords.y);
             }
@@ -81,13 +69,22 @@ int main() {
 	constexpr int kheight{800};
 	constexpr int kwidth{800};
     constexpr float kaspect_ratio{static_cast<float>(kwidth)/ static_cast<float>(kheight)};
+
+    const Camera camera(
+        {0.f,0.f,3.f}, //eye
+        {0.f,0.f,0.f}, //centre
+        {0.f,1.f,0.f}  //up
+    );
     
 	FrameBuffer image{kheight,kwidth};
-	std::ofstream out_file{"/home/sc2046/Projects/Graphics/CuRa/scenes/04Transforms/orthographic.ppm"};
+	std::ofstream out_file{"/home/sc2046/Projects/Graphics/CuRa/scenes/05PerspectiveCorrectInterpolation/angled_triangle.ppm"};
 
     //Load model and the associated texture(s).
-    const Model head("/home/sc2046/Projects/Graphics/CuRa/assets/models/head.obj");
-    const FrameBuffer diffuse_map =  ParsePPMTexture("/home/sc2046/Projects/Graphics/CuRa/assets/textures/head_diffuse.ppm");
+    //const Model head("/home/sc2046/Projects/Graphics/CuRa/assets/models/head.obj");
+    //const FrameBuffer diffuse_map =  ParsePPMTexture("/home/sc2046/Projects/Graphics/CuRa/assets/textures/head_diffuse.ppm");
+
+    const Model head("/home/sc2046/Projects/Graphics/CuRa/assets/models/angled_triangle.obj");
+    const FrameBuffer diffuse_map = ParsePPMTexture("/home/sc2046/Projects/Graphics/CuRa/assets/textures/checker.ppm");
 
     //Iterate over each face (triangle) in the model
     for(const auto& face : head.Faces()) {
@@ -101,7 +98,7 @@ int main() {
             const auto hworldpos = Vec4f(worldpos,1.f);
 
             //Transform to camera space by applying view matrix.
-            const auto lookat = LookAt({0.f,0.f,3.f}, {0.f,0.f,0.f}, {0.f,1.f,0.f});
+            const auto lookat = camera.view;
             const auto hcamerapos = la::mul(lookat, hworldpos);
 
             //Transform to clip space by applying projection matrix.

@@ -1,13 +1,6 @@
 
 struct RenderPipeline {
 public:
-    /*
-    struct RenderProps
-    {
-        
-    }
-    
-    */
 
 public:
 

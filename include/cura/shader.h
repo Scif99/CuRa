@@ -13,18 +13,18 @@
 
 #include "vertex.h"
 
-// inline Color3f TextureLookup( const Buffer<Color3f>* texture, float u, float v, bool flip_v = true) {
-//     assert(u>=0 && u<=1.f);
-//     assert(v>=0 && v<=1.f);
+inline Color3f TextureLookup( const FrameBuffer& texture, float u, float v, bool flip_v = true) {
+    assert(u>=0 && u<=1.f);
+    assert(v>=0 && v<=1.f);
 
-//     //Also need to scale texture coordinates to the texture's dimensions
-//     const auto tw{texture->Width()};
-//     const auto th{texture->Height()}; 
+    //Also need to scale texture coordinates to the texture's dimensions
+    const auto tw{texture.width};
+    const auto th{texture.height}; 
 
-//     const float scaled_u = u*tw;
-//     const float scaled_v = flip_v ? th - v*th : v*th;
-//     return texture->Get(scaled_u,scaled_v);
-// }
+    const float scaled_u = u*tw;
+    const float scaled_v = flip_v ? th - v*th : v*th;
+    return texture.Color(scaled_u,scaled_v);
+}
 
 // using Uniform = std::variant<float, Vec2f, Vec3f, Norm3f, Mat4f>; //Contains all the possible types of a uniform variable
 
@@ -48,27 +48,23 @@
 
 //     template<UniformType T>
 //     void SetUniform(const std::string& name, T f) { 
-//         //const std::lock_guard<std::mutex> lock(mtx);
 //             uniforms_[name] = f; 
 //     }   
 
 //     template<UniformType T>
 //     [[nodiscard]] T GetUniform(const std::string& name) {
-//         //const std::lock_guard<std::mutex> lock(mtx);
 //         assert(uniforms_.contains(name)&& "Uniform not found");
 //         return std::get<T>(std::visit([](auto&& arg) -> Uniform {return arg;}, uniforms_[name])); //Note the lambda returns an std::variant
 //     }  
 
 //     //Store a ptr to a texture map
-//     void SetTexture(const std::string& name, const Buffer<Color3f>* p_tex) {
-//         //const std::lock_guard<std::mutex> lock(mtx);
+//     void SetTexture(const std::string& name, FrameBuffer& p_tex) {
 //         textures_[name] = p_tex;
 //     }
     
 //     //Retrieve a ptr to a texture map
 //     //TODO handle errors
-//     [[nodiscard]] const Buffer<Color3f>* Texture(const std::string& name) {
-//         //const std::lock_guard<std::mutex> lock(mtx);
+//     [[nodiscard]] const * Texture(const std::string& name) {
 //         assert(textures_.contains(name)&& "Texture not found");
 //         return textures_[name]; 
 //     }
@@ -77,7 +73,6 @@
 
 //     std::unordered_map<std::string, Uniform> uniforms_; //Models uniforms in opengl
 //     std::unordered_map<std::string, const Buffer<Color3f>*> textures_; //Models sampler2D in opengl
-//     //std::mutex mtx;
 // };
 
 

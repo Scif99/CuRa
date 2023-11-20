@@ -67,3 +67,6 @@ target_link_libraries(assignment03 PRIVATE cura_lib)
 
 add_executable(assignment04 src/04Transforms/04transformed_mesh.cpp)
 target_link_libraries(assignment04 PRIVATE cura_lib)
+
+add_executable(assignment05 src/05PerspectiveCorrectInterpolation/05perspectivecorrectinterpolation.cpp)
+target_link_libraries(assignment05 PRIVATE cura_lib)
